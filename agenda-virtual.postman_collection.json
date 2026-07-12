@@ -1,0 +1,507 @@
+{
+	"info": {
+		"_postman_id": "b3fcd094-1a9f-4b06-a5db-f6be4e3f1a09",
+		"name": "Agenda Virtual API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Configuracoes",
+			"item": [
+				{
+					"name": "Obter Configuracoes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/configuracoes",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"configuracoes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Configuracoes",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"hora_abertura\": \"08:00:00\",\n  \"hora_fechamento\": \"18:00:00\",\n  \"almoco_inicio\": \"12:00:00\",\n  \"almoco_fim\": \"13:00:00\",\n  \"dias_funcionamento\": [1, 2, 3, 4, 5]\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/configuracoes",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"configuracoes"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Categorias",
+			"item": [
+				{
+					"name": "Listar Categorias",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/categorias",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"categorias"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Categoria",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.globals.set(\"last_categoria_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Cabelo e Barba\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/categorias",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"categorias"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Servicos",
+			"item": [
+				{
+					"name": "Listar Servicos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/servicos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"servicos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Servico",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.globals.set(\"last_servico_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"categoria_id\": \"{{last_categoria_id}}\",\n  \"nome\": \"Corte degrade masculino\",\n  \"duracao_minutos\": 30,\n  \"preco\": 45.00\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/servicos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"servicos"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pacientes",
+			"item": [
+				{
+					"name": "Listar Pacientes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/pacientes",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"pacientes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Paciente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.globals.set(\"last_paciente_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Kaue Cliente\",\n  \"telefone\": \"11988888888\",\n  \"email\": \"kaue.cliente@example.com\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/pacientes",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"pacientes"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Profissionais",
+			"item": [
+				{
+					"name": "Listar Profissionais",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/profissionais?ativo=true",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"profissionais"
+							],
+							"query": [
+								{
+									"key": "ativo",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Profissional",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.globals.set(\"last_profissional_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Lucas Profissional\",\n  \"telefone\": \"11999999999\",\n  \"prioridade\": 2,\n  \"servico_ids\": [\n    \"{{last_servico_id}}\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/profissionais",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"profissionais"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bloqueios Agenda",
+			"item": [
+				{
+					"name": "Criar Bloqueio",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.globals.set(\"last_bloqueio_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"profissional_id\": \"{{last_profissional_id}}\",\n  \"inicio\": \"2026-07-20T10:00:00-03:00\",\n  \"fim\": \"2026-07-20T11:00:00-03:00\",\n  \"motivo\": \"Consulta Medica\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/bloqueios-agenda",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"bloqueios-agenda"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Agendamentos",
+			"item": [
+				{
+					"name": "Criar Agendamento Correto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paciente_id\": \"{{last_paciente_id}}\",\n  \"profissional_id\": \"{{last_profissional_id}}\",\n  \"servico_id\": \"{{last_servico_id}}\",\n  \"inicio\": \"2026-07-20T14:00:00-03:00\",\n  \"fim\": \"2026-07-20T14:30:00-03:00\",\n  \"status\": \"PENDENTE\",\n  \"observacao\": \"Cliente solicitou corte de cabelo com cuidado especial\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/agendamentos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"agendamentos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Agendamento Conflitante (Erro esperado)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paciente_id\": \"{{last_paciente_id}}\",\n  \"profissional_id\": \"{{last_profissional_id}}\",\n  \"servico_id\": \"{{last_servico_id}}\",\n  \"inicio\": \"2026-07-20T14:15:00-03:00\",\n  \"fim\": \"2026-07-20T14:45:00-03:00\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/agendamentos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"agendamentos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Agendamento no Almoço (Erro esperado)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paciente_id\": \"{{last_paciente_id}}\",\n  \"profissional_id\": \"{{last_profissional_id}}\",\n  \"servico_id\": \"{{last_servico_id}}\",\n  \"inicio\": \"2026-07-20T12:30:00-03:00\",\n  \"fim\": \"2026-07-20T13:00:00-03:00\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/agendamentos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"agendamentos"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

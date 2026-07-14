@@ -10,6 +10,10 @@ export class ProfissionalResource extends BaseResource<Profissional> {
       foto_url: this.resource.foto_url || null,
       prioridade: this.resource.prioridade,
       ativo: this.resource.ativo,
+      email: this.resource.email || null,
+      categoria: this.resource.categoria,
+      status_acesso: this.resource.status_acesso,
+      status_reset: this.resource.status_reset,
       created_at: this.resource.created_at,
       updated_at: this.resource.updated_at,
     };

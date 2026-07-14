@@ -69,4 +69,95 @@ export class ProfissionalController extends BaseController {
       return this.error(e.message || "Erro ao remover profissional", 400);
     }
   }
+
+  async updateAcesso(id: string, req: NextRequest) {
+    try {
+      const body = await req.json();
+      const { status_acesso, categoria } = body;
+
+      if (!status_acesso) {
+        return this.error("O campo 'status_acesso' é obrigatório", 400);
+      }
+      if (status_acesso !== "pendente" && status_acesso !== "liberado") {
+        return this.error("status_acesso inválido. Use 'pendente' ou 'liberado'", 400);
+      }
+      if (categoria && !["desenvolvedor", "dono", "funcionario"].includes(categoria)) {
+        return this.error("categoria inválida. Use 'desenvolvedor', 'dono' ou 'funcionario'", 400);
+      }
+
+      const updated = await this.service.update(id, { status_acesso, categoria });
+      return this.json({
+        message: "Status de acesso atualizado com sucesso!",
+        data: new ProfissionalResource(updated).toArray(),
+      });
+    } catch (e: any) {
+      return this.error(e.message || "Erro ao atualizar acesso do profissional", 400);
+    }
+  }
+
+  async esqueciSenha(req: NextRequest) {
+    try {
+      const body = await req.json();
+      const { email } = body;
+
+      if (!email) {
+        return this.error("O campo 'email' é obrigatório", 400);
+      }
+
+      await this.service.solicitarReset(email);
+      return this.json({
+        message: "Se o e-mail estiver cadastrado, a solicitação de reset foi enviada para a administração.",
+      });
+    } catch (e: any) {
+      return this.error(e.message || "Erro ao solicitar reset de senha", 400);
+    }
+  }
+
+  async aprovarReset(id: string, req: NextRequest) {
+    try {
+      const updated = await this.service.aprovarReset(id);
+      return this.json({
+        message: "Reset de senha aprovado com sucesso!",
+        data: new ProfissionalResource(updated).toArray(),
+      });
+    } catch (e: any) {
+      return this.error(e.message || "Erro ao aprovar reset de senha", 400);
+    }
+  }
+
+  async statusReset(email: string) {
+    try {
+      const status = await this.service.checkResetStatus(email);
+      if (status === null) {
+        return this.error("Profissional não encontrado", 404);
+      }
+      return this.json({ status_reset: status });
+    } catch (e: any) {
+      return this.error(e.message || "Erro ao verificar status de reset", 400);
+    }
+  }
+
+  async redefinirSenha(req: NextRequest) {
+    try {
+      const body = await req.json();
+      const { email, nova_senha } = body;
+
+      if (!email) {
+        return this.error("O campo 'email' é obrigatório", 400);
+      }
+      if (!nova_senha) {
+        return this.error("O campo 'nova_senha' é obrigatório", 400);
+      }
+
+      await this.service.redefinirSenha(email, nova_senha);
+      return this.json({
+        message: "Senha atualizada com sucesso",
+      });
+    } catch (e: any) {
+      if (e.status === 403) {
+        return this.error(e.message, 403);
+      }
+      return this.error(e.message || "Erro ao redefinir senha", 400);
+    }
+  }
 }

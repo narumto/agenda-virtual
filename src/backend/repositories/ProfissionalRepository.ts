@@ -7,6 +7,17 @@ export class ProfissionalRepository extends BaseRepository<Profissional, string>
     super("profissionais", "id");
   }
 
+  async findByEmail(email: string): Promise<Profissional | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as Profissional | null;
+  }
+
   async listActive(): Promise<Profissional[]> {
     const { data, error } = await supabase
       .from(this.tableName)

@@ -24,6 +24,11 @@ export interface Profissional {
   foto_url?: string | null;
   prioridade: number;
   ativo: boolean;
+  email: string | null;
+  categoria: 'desenvolvedor' | 'dono' | 'funcionario';
+  status_acesso: 'pendente' | 'liberado';
+  senha_hash: string | null;
+  status_reset: 'nenhum' | 'pendente' | 'aprovado';
   created_at: string;
   updated_at: string;
 }

@@ -27,6 +27,8 @@ Para testar a API de forma interativa, você pode importar o arquivo [agenda-vir
 - [Profissionais](#5-profissionais) (`/api/profissionais`)
 - [Bloqueios de Agenda](#6-bloqueios-de-agenda) (`/api/bloqueios-agenda`)
 - [Agendamentos](#7-agendamentos) (`/api/agendamentos`)
+- [Autenticação](#8-autenticação) (`/api/auth`)
+- [Redefinição de Senha](#9-redefinição-de-senha-profissional) (`/api/profissionais/...`)
 
 ---
 
@@ -235,6 +237,9 @@ Você pode enviar uma lista de IDs de serviços que o profissional realiza no ca
   "nome": "João Barbeiro",
   "telefone": "11999999999",
   "prioridade": 5,
+  "email": "joao.barbeiro@example.com",
+  "categoria": "funcionario",
+  "status_acesso": "pendente",
   "servico_ids": [
     "c1f2e3d4-b5a6-7890-1234-567890abcdef"
   ]
@@ -251,6 +256,9 @@ Você pode enviar uma lista de IDs de serviços que o profissional realiza no ca
     "foto_url": null,
     "prioridade": 5,
     "ativo": true,
+    "email": "joao.barbeiro@example.com",
+    "categoria": "funcionario",
+    "status_acesso": "pendente",
     "created_at": "2026-07-12T17:03:52.000Z",
     "updated_at": "2026-07-12T17:03:52.000Z"
   }
@@ -271,11 +279,46 @@ Retorna os dados do profissional e o array de IDs de serviços que ele realiza e
   "foto_url": null,
   "prioridade": 5,
   "ativo": true,
+  "email": "joao.barbeiro@example.com",
+  "categoria": "funcionario",
+  "status_acesso": "pendente",
   "created_at": "2026-07-12T17:03:52.000Z",
   "updated_at": "2026-07-12T17:03:52.000Z",
   "servico_ids": [
     "c1f2e3d4-b5a6-7890-1234-567890abcdef"
   ]
+}
+```
+
+### Liberação de Acesso
+Atualiza o status de acesso e categoria de um profissional.
+
+- **Método:** `PATCH`
+- **Rota:** `/api/profissionais/[id]/acesso`
+- **Corpo da Requisição (JSON):**
+```json
+{
+  "status_acesso": "liberado",
+  "categoria": "dono"
+}
+```
+- **Resposta Sucesso (`200 OK`):**
+```json
+{
+  "message": "Status de acesso updated com sucesso!",
+  "data": {
+    "id": "e9e9e9e9-e9e9-e9e9-e9e9-e9e9e9e9e9e9",
+    "nome": "João Barbeiro",
+    "telefone": "11999999999",
+    "foto_url": null,
+    "prioridade": 5,
+    "ativo": true,
+    "email": "joao.barbeiro@example.com",
+    "categoria": "dono",
+    "status_acesso": "liberado",
+    "created_at": "2026-07-12T17:03:52.000Z",
+    "updated_at": "2026-07-12T17:03:52.000Z"
+  }
 }
 ```
 
@@ -409,5 +452,174 @@ O frontend deve capturar a mensagem e exibir um alerta amigável na tela.
 ```json
 {
   "message": "A agenda do profissional está bloqueada neste horário: Consulta Médica"
+}
+```
+
+---
+
+## 8. Autenticação
+
+### Verificação de Login Google (NextAuth)
+Realiza a verificação de login integrada ao NextAuth para obter permissões de acesso do usuário. O fluxo é separado de acordo com a `role` solicitada.
+
+- **Método:** `POST`
+- **Rota:** `/api/auth/verify`
+- **Corpo da Requisição (JSON):**
+```json
+{
+  "email": "joao.barbeiro@example.com",
+  "google_id": "google_joao_123",
+  "nome": "João Barbeiro",
+  "foto_url": "https://example.com/joao.png",
+  "role": "profissional"
+}
+```
+> **Nota:** O campo `role` é obrigatório e aceita os valores `'profissional'` ou `'paciente'`.
+
+#### Fluxo 1: Profissional (`role: "profissional"`)
+1. Busca pelo e-mail na tabela `profissionais`.
+2. **Se encontrar**:
+   - Se o `status_acesso` for `'pendente'`, retorna `403 Forbidden`.
+   - Se for `'liberado'`, retorna os dados com `role: "profissional"`.
+3. **Se não encontrar**:
+   - Cria um novo registro na tabela `profissionais` com status `'pendente'` e retorna `403 Forbidden` (Login pendente de liberação).
+
+#### Fluxo 2: Paciente (`role: "paciente"`)
+1. Busca pelo e-mail na tabela `pacientes`.
+2. **Se encontrar**:
+   - Atualiza o `google_id` se for nulo ou diferente.
+   - Retorna os dados com `role: "paciente"`.
+3. **Se não encontrar**:
+   - Cria um novo registro na tabela `pacientes` (telefone padrão: `""`) e retorna com `role: "paciente"`.
+
+---
+
+- **Resposta Sucesso - Profissional Liberado (`200 OK`):**
+```json
+{
+  "role": "profissional",
+  "data": {
+    "id": "e9e9e9e9-e9e9-e9e9-e9e9-e9e9e9e9e9e9",
+    "nome": "João Barbeiro",
+    "telefone": "11999999999",
+    "foto_url": "https://example.com/joao.png",
+    "prioridade": 5,
+    "ativo": true,
+    "email": "joao.barbeiro@example.com",
+    "categoria": "funcionario",
+    "status_acesso": "liberado",
+    "created_at": "2026-07-12T17:03:52.000Z",
+    "updated_at": "2026-07-12T17:03:52.000Z"
+  }
+}
+```
+- **Resposta Sucesso - Paciente (`200 OK`):**
+```json
+{
+  "role": "paciente",
+  "data": {
+    "id": "f5f5f5f5-f5f5-f5f5-f5f5-f5f5f5f5f5f5",
+    "nome": "Carlos Cliente",
+    "telefone": "",
+    "email": "carlos@example.com",
+    "google_id": "google_carlos_123",
+    "created_at": "2026-07-12T17:03:51.000Z",
+    "updated_at": "2026-07-12T17:03:51.000Z"
+  }
+}
+```
+- **Resposta Erro - Acesso Pendente (`403 Forbidden`):**
+```json
+{
+  "message": "Login pendente de liberação pela administração"
+}
+```
+
+---
+
+## 9. Redefinição de Senha (Profissional)
+
+Lógica de "Esqueci minha senha" com aprovação manual pela administração (sem envio de e-mails).
+
+### Solicitar Reset de Senha
+Solicita a redefinição de senha para um profissional.
+
+- **Método:** `POST`
+- **Rota:** `/api/profissionais/esqueci-senha`
+- **Corpo da Requisição (JSON):**
+```json
+{
+  "email": "joao.barbeiro@example.com"
+}
+```
+- **Resposta Sucesso (`200 OK`):**
+```json
+{
+  "message": "Se o e-mail estiver cadastrado, a solicitação de reset foi enviada para a administração."
+}
+```
+> **Nota:** Retorna sucesso genérico mesmo se o e-mail não estiver cadastrado, a fim de evitar enumeração de usuários.
+
+### Aprovar Reset de Senha (Admin)
+Aprova a solicitação de reset de senha de um profissional, alterando o status para `aprovado`.
+
+- **Método:** `PATCH`
+- **Rota:** `/api/profissionais/[id]/aprovar-reset`
+- **Resposta Sucesso (`200 OK`):**
+```json
+{
+  "message": "Reset de senha aprovado com sucesso!",
+  "data": {
+    "id": "e9e9e9e9-e9e9-e9e9-e9e9-e9e9e9e9e9e9",
+    "nome": "João Barbeiro",
+    "telefone": "11999999999",
+    "foto_url": null,
+    "prioridade": 5,
+    "ativo": true,
+    "email": "joao.barbeiro@example.com",
+    "categoria": "funcionario",
+    "status_acesso": "liberado",
+    "status_reset": "aprovado",
+    "created_at": "2026-07-12T17:03:52.000Z",
+    "updated_at": "2026-07-12T17:03:52.000Z"
+  }
+}
+```
+
+### Checar Status do Reset
+Faz o pooling da liberação do reset do profissional.
+
+- **Método:** `GET`
+- **Rota:** `/api/profissionais/status-reset/[email]`
+- **Resposta Sucesso (`200 OK`):**
+```json
+{
+  "status_reset": "pendente"
+}
+```
+> **Valores de `status_reset`:** `nenhum`, `pendente`, `aprovado`.
+
+### Redefinir Senha
+Define a nova senha do profissional (mínimo de 8 caracteres), criptografando-a no banco. Só é permitida se o `status_reset` estiver como `aprovado`.
+
+- **Método:** `POST`
+- **Rota:** `/api/profissionais/redefinir-senha`
+- **Corpo da Requisição (JSON):**
+```json
+{
+  "email": "joao.barbeiro@example.com",
+  "nova_senha": "novasenhafortissima123"
+}
+```
+- **Resposta Sucesso (`200 OK`):**
+```json
+{
+  "message": "Senha atualizada com sucesso"
+}
+```
+- **Resposta Erro - Não Autorizado (`403 Forbidden`):**
+```json
+{
+  "message": "Redefinição de senha não autorizada"
 }
 ```

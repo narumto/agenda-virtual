@@ -30,7 +30,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r1",
     name: "Limpeza de Pele Profunda",
     duration: "90 min",
-    price: "R$ 180",
+    price: "180€",
     description:
       "Remoção de impurezas, cravos e células mortas, devolvendo o viço e a saúde da pele.",
     image:
@@ -41,7 +41,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r2",
     name: "Peeling de Diamante",
     duration: "45 min",
-    price: "R$ 120",
+    price: "120€",
     description:
       "Microesfoliação que auxilia na renovação celular e redução de manchas leves.",
     image:
@@ -52,7 +52,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r3",
     name: "Revitalização Facial",
     duration: "60 min",
-    price: "R$ 150",
+    price: "150€",
     description:
       "Nutrição intensiva com ativos antioxidantes para uma pele luminosa e hidratada.",
     image:
@@ -63,7 +63,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "c1",
     name: "Drenagem Linfática",
     duration: "60 min",
-    price: "R$ 140",
+    price: "140€",
     description:
       "Reduz o inchaço e melhora a circulação através de manobras suaves e rítmicas.",
     image:
@@ -74,7 +74,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "c2",
     name: "Massagem Relaxante",
     duration: "50 min",
-    price: "R$ 130",
+    price: "130€",
     description:
       "Alívio de tensões musculares e promoção de bem-estar profundos com óleos essenciais.",
     image:
@@ -85,7 +85,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "c3",
     name: "Massagem Modeladora",
     duration: "60 min",
-    price: "R$ 160",
+    price: "160€",
     description:
       "Manobras vigorosas que auxiliam no contorno corporal e redução de medidas.",
     image:
@@ -105,7 +105,22 @@ export default function HomePage() {
     const saved = localStorage.getItem("av_services");
     if (saved) {
       try {
-        setServices(JSON.parse(saved));
+        let parsed = JSON.parse(saved);
+        let modified = false;
+        parsed = parsed.map((s: any) => {
+          if (s.price && s.price.includes("R$")) {
+            modified = true;
+            return {
+              ...s,
+              price: s.price.replace("R$", "").replace(" ", "") + "€"
+            };
+          }
+          return s;
+        });
+        if (modified) {
+          localStorage.setItem("av_services", JSON.stringify(parsed));
+        }
+        setServices(parsed);
       } catch (e) {
         setServices(DEFAULT_SERVICES);
       }

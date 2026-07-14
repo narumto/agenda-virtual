@@ -29,7 +29,7 @@ const summaryItems = [
   {
     icon: Banknote,
     label: "Valor Total",
-    value: "R$ 80",
+    value: "80€",
     highlight: true,
   },
 ];

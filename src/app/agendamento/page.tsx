@@ -184,7 +184,7 @@ export default function AgendamentoPage() {
                 className="text-2xl font-light ml-auto"
                 style={{ fontFamily: "'Playfair Display', serif", color: ACCENT }}
               >
-                R$ 80
+                80€
               </span>
             </div>
           </div>

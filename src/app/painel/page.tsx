@@ -63,7 +63,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r1",
     name: "Limpeza de Pele Profunda",
     duration: "90 min",
-    price: "R$ 180",
+    price: "180€",
     description:
       "Remoção de impurezas, cravos e células mortas, devolvendo o viço e a saúde da pele.",
     image:
@@ -74,7 +74,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r2",
     name: "Peeling de Diamante",
     duration: "45 min",
-    price: "R$ 120",
+    price: "120€",
     description:
       "Microesfoliação que auxilia na renovação celular e redução de manchas leves.",
     image:
@@ -85,7 +85,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "r3",
     name: "Revitalização Facial",
     duration: "60 min",
-    price: "R$ 150",
+    price: "150€",
     description:
       "Nutrição intensiva com ativos antioxidantes para uma pele luminosa e hidratada.",
     image:
@@ -96,7 +96,7 @@ const DEFAULT_SERVICES: Service[] = [
     id: "c1",
     name: "Drenagem Linfática",
     duration: "60 min",
-    price: "R$ 140",
+    price: "140€",
     description:
       "Reduz o inchaço e melhora a circulação através de manobras suaves e rítmicas.",
     image:
@@ -302,7 +302,22 @@ export default function PainelPage() {
     const saved = localStorage.getItem("av_services");
     if (saved) {
       try {
-        setServices(JSON.parse(saved));
+        let parsed = JSON.parse(saved);
+        let modified = false;
+        parsed = parsed.map((s: any) => {
+          if (s.price && s.price.includes("R$")) {
+            modified = true;
+            return {
+              ...s,
+              price: s.price.replace("R$", "").replace(" ", "") + "€"
+            };
+          }
+          return s;
+        });
+        if (modified) {
+          localStorage.setItem("av_services", JSON.stringify(parsed));
+        }
+        setServices(parsed);
       } catch (e) {
         setServices(DEFAULT_SERVICES);
       }
@@ -544,17 +559,7 @@ export default function PainelPage() {
             </div>
 
             {/* Header buttons */}
-            {activeNav === "agenda" && (
-              <button
-                id="btn-new-appointment"
-                onClick={() => router.push("/agendamento")}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 cursor-pointer"
-                style={{ background: ACCENT }}
-              >
-                <Plus size={15} />
-                Novo Agendamento
-              </button>
-            )}
+
 
             {activeNav === "services" && (
               <button
@@ -1140,7 +1145,7 @@ export default function PainelPage() {
               className="text-2xl font-light"
               style={{ fontFamily: "'Playfair Display', serif", color: ACCENT }}
             >
-              R$ 760
+              760€
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               com base nos serviços do dia
@@ -1204,12 +1209,12 @@ export default function PainelPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                    Preço (BRL) *
+                    Preço (EUR) *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: R$ 150"
+                    placeholder="Ex: 150€"
                     value={servPrice}
                     onChange={(e) => setServPrice(e.target.value)}
                     className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"

@@ -3,17 +3,26 @@ import { Agendamento } from "../models/types";
 
 export class AgendamentoResource extends BaseResource<Agendamento> {
   toArray() {
+    const r = this.resource as any;
     return {
-      id: this.resource.id,
-      paciente_id: this.resource.paciente_id,
-      profissional_id: this.resource.profissional_id,
-      servico_id: this.resource.servico_id,
-      inicio: this.resource.inicio,
-      fim: this.resource.fim,
-      status: this.resource.status,
-      observacao: this.resource.observacao || null,
-      created_at: this.resource.created_at,
-      updated_at: this.resource.updated_at,
+      id: r.id,
+      paciente_id: r.paciente_id,
+      servico_id: r.servico_id,
+      inicio: r.inicio,
+      fim: r.fim,
+      status: r.status,
+      observacao: r.observacao || null,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      // Enriched from join (present when fetched via listByPatient)
+      servico: r.servicos
+        ? {
+            id: r.servicos.id,
+            nome: r.servicos.nome,
+            preco: r.servicos.preco,
+            duracao_minutos: r.servicos.duracao_minutos,
+          }
+        : null,
     };
   }
 }

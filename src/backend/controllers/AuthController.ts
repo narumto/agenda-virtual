@@ -39,11 +39,13 @@ export class AuthController extends BaseController {
       if (result.role === "profissional") {
         return this.json({
           role: result.role,
+          isNewUser: result.isNewUser,
           data: new ProfissionalResource(result.user as any).toArray(),
         });
       } else {
         return this.json({
           role: result.role,
+          isNewUser: result.isNewUser,
           data: new PacienteResource(result.user as any).toArray(),
         });
       }

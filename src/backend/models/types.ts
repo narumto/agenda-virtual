@@ -61,7 +61,6 @@ export type AgendamentoStatus = 'PENDENTE' | 'CONFIRMADO' | 'CONCLUIDO' | 'CANCE
 export interface Agendamento {
   id: string;
   paciente_id: string;
-  profissional_id: string;
   servico_id: string;
   inicio: string;
   fim: string;

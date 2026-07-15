@@ -8,13 +8,7 @@ export class AgendamentoController extends BaseController {
 
   async index(req: NextRequest) {
     try {
-      const profissionalId = req.nextUrl.searchParams.get("profissional_id");
       const pacienteId = req.nextUrl.searchParams.get("paciente_id");
-
-      if (profissionalId) {
-        const items = await this.service.listByProfessional(profissionalId);
-        return this.json(AgendamentoResource.collection(items));
-      }
 
       if (pacienteId) {
         const items = await this.service.listByPatient(pacienteId);

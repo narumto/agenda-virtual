@@ -5,6 +5,7 @@ import { Profissional, Paciente } from "../models/types";
 export interface VerifyLoginResult {
   role: "profissional" | "paciente";
   user: Profissional | Paciente;
+  isNewUser: boolean;
 }
 
 export class AuthService {
@@ -37,6 +38,7 @@ export class AuthService {
         return {
           role: "profissional",
           user: profissional,
+          isNewUser: false,
         };
       } else {
         const newProfissional = await this.profissionalRepo.create({
@@ -67,6 +69,7 @@ export class AuthService {
         return {
           role: "paciente",
           user: updatedPaciente,
+          isNewUser: false,
         };
       } else {
         const newPaciente = await this.pacienteRepo.create({
@@ -79,6 +82,7 @@ export class AuthService {
         return {
           role: "paciente",
           user: newPaciente,
+          isNewUser: true,
         };
       }
     }

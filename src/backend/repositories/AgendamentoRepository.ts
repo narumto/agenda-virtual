@@ -7,6 +7,30 @@ export class AgendamentoRepository extends BaseRepository<Agendamento, string> {
     super("agendamentos", "id");
   }
 
+  override async all(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select(`
+        *,
+        pacientes (
+          id,
+          nome,
+          telefone,
+          email
+        ),
+        servicos (
+          id,
+          nome,
+          preco,
+          duracao_minutos
+        )
+      `)
+      .order("inicio", { ascending: true });
+
+    if (error) throw error;
+    return data as any[];
+  }
+
   async listByPatient(pacienteId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from(this.tableName)

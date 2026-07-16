@@ -24,17 +24,32 @@ export function useAuth(): UseAuthReturn {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (session?.user && active) {
-          setUserProfile({
-            nome:
-              session.user.user_metadata?.full_name ||
-              session.user.user_metadata?.name ||
-              "Usuário",
-            foto_url:
-              session.user.user_metadata?.avatar_url ||
-              session.user.user_metadata?.picture ||
-              "",
-          });
+        if (session?.user) {
+          if (active) {
+            setUserProfile({
+              nome:
+                session.user.user_metadata?.full_name ||
+                session.user.user_metadata?.name ||
+                "Usuário",
+              foto_url:
+                session.user.user_metadata?.avatar_url ||
+                session.user.user_metadata?.picture ||
+                "",
+              role: "paciente",
+            });
+          }
+        } else {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated && active) {
+              setUserProfile({
+                nome: data.data.nome,
+                foto_url: data.data.foto_url || "",
+                role: "profissional",
+              });
+            }
+          }
         }
       } catch {
         // Session fetch failed — user remains null
@@ -51,10 +66,15 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("google_login_role");
-    router.push("/login");
-  }, [router]);
+    if (userProfile?.role === "profissional") {
+      await fetch("/api/profissionais/auth", { method: "DELETE" });
+      window.location.href = "/profissional/login";
+    } else {
+      await supabase.auth.signOut();
+      localStorage.removeItem("google_login_role");
+      router.push("/login");
+    }
+  }, [router, userProfile]);
 
   return { userProfile, loading, signOut };
 }

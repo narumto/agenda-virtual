@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Sparkles, AlertCircle, LogIn } from "lucide-react";
 import { SITE_NAME } from "@/config/constants";
@@ -12,14 +12,54 @@ export default function ProfissionalLoginPage() {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch("/api/configuracoes");
+        if (res.ok) {
+          const configData = await res.json();
+          setConfig(configData);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleEmailBlur = async () => {
+    if (!email.trim() || !email.includes("@")) return;
+    try {
+      const res = await fetch("/api/profissionais/auth/verificar-cadastro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNeedsPasswordSetup(data.needsPasswordSetup);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (needsPasswordSetup) {
+      handleConfigurarSenha(e);
+      return;
+    }
+
     if (!email.trim() || !senha.trim()) {
-      setErrorMsg("Preencha o email e a senha.");
+      setErrorMsg("Preencha o email e a palavra-passe.");
       return;
     }
 
@@ -39,9 +79,46 @@ export default function ProfissionalLoginPage() {
         throw new Error(data.message || "Erro ao fazer login");
       }
 
-      router.push("/profissional/dashboard");
+      window.location.href = "/painel";
     } catch (err: any) {
       setErrorMsg(err.message || "Erro inesperado. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfigurarSenha = async (e: React.FormEvent) => {
+    if (!senha.trim() || !confirmarSenha.trim()) {
+      setErrorMsg("Preencha todos os campos da palavra-passe.");
+      return;
+    }
+    if (senha !== confirmarSenha) {
+      setErrorMsg("As palavras-passe não coincidem.");
+      return;
+    }
+    if (senha.length < 8) {
+      setErrorMsg("A palavra-passe deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/profissionais/auth/configurar-senha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), senha }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Erro ao configurar a palavra-passe.");
+      }
+
+      window.location.href = "/painel";
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erro inesperado.");
     } finally {
       setLoading(false);
     }
@@ -57,24 +134,29 @@ export default function ProfissionalLoginPage() {
 
         <div className="px-8 py-9 space-y-7">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm"
-              style={{ background: ACCENT }}
-            >
-              <Sparkles size={22} className="text-white" />
-            </div>
+            <img
+              src={config?.logo_url || "/logo.png"}
+              alt="Logo"
+              className="w-16 h-16 rounded-2xl object-cover shadow-sm ring-1 ring-neutral-200 shrink-0"
+            />
             <div>
               <h1
                 className="text-2xl text-[#2B2723]"
                 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 500 }}
               >
-                {SITE_NAME}
+                {config?.nome_site || SITE_NAME}
               </h1>
               <p className="text-sm text-neutral-500 mt-1">
                 Acesso para profissionais
               </p>
             </div>
           </div>
+
+          {needsPasswordSetup && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-2xl text-xs leading-relaxed">
+              <strong>Olá!</strong> O seu acesso já foi liberado pelo administrador. Defina a sua palavra-passe abaixo para concluir o seu registo e aceder ao painel.
+            </div>
+          )}
 
           {errorMsg && (
             <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl text-sm">
@@ -93,16 +175,17 @@ export default function ProfissionalLoginPage() {
                 autoComplete="email"
                 placeholder="seu@email.com"
                 value={email}
+                onBlur={handleEmailBlur}
                 onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
                 className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:bg-white transition-colors"
                 onFocus={(e) => (e.currentTarget.style.borderColor = ACCENT)}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "")}
+                onBlurCapture={handleEmailBlur}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
-                Senha
+                {needsPasswordSetup ? "Definir Palavra-passe (mínimo 8 caracteres)" : "Palavra-passe"}
               </label>
               <div className="relative">
                 <input
@@ -126,6 +209,23 @@ export default function ProfissionalLoginPage() {
               </div>
             </div>
 
+            {needsPasswordSetup && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">
+                  Confirmar Palavra-passe
+                </label>
+                <input
+                  type={showSenha ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmarSenha}
+                  onChange={(e) => { setConfirmarSenha(e.target.value); setErrorMsg(null); }}
+                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:bg-white transition-colors"
+                  onFocus={(e) => (e.currentTarget.style.borderColor = ACCENT)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "")}
+                />
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -137,7 +237,7 @@ export default function ProfissionalLoginPage() {
               ) : (
                 <>
                   <LogIn size={16} />
-                  Entrar
+                  {needsPasswordSetup ? "Concluir Registo & Entrar" : "Entrar"}
                 </>
               )}
             </button>

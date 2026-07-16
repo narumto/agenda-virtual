@@ -5,6 +5,9 @@ export interface Configuracao {
   almoco_inicio: string;
   almoco_fim: string;
   dias_funcionamento: number[];
+  telefone?: string | null;
+  logo_url?: string | null;
+  nome_site?: string | null;
 }
 
 export interface Paciente {

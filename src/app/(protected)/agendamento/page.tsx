@@ -12,6 +12,21 @@ import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { ACCENT, ACCENT_LIGHT } from "@/config/constants";
 import type { Service, AppConfig } from "@/types";
+import Holidays from "date-holidays";
+
+const hd = new Holidays("PT");
+
+const getHolidayName = (year: number, month: number, day: number): string | null => {
+  const d = new Date(year, month, day);
+  const holiday = hd.isHoliday(d) as any;
+  if (holiday) {
+    if (Array.isArray(holiday)) {
+      return holiday[0].name;
+    }
+    return holiday.name;
+  }
+  return null;
+};
 
 const DEFAULT_TIME_SLOTS = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
@@ -55,13 +70,11 @@ function AgendamentoContent() {
   const { userProfile, signOut } = useAuth();
   const today = new Date();
 
-  // Navigation and State
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Dynamic Backend Data State
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -74,13 +87,11 @@ function AgendamentoContent() {
 
   const cells = buildCalendar(calYear, calMonth);
 
-  // Load initial backend data
   useEffect(() => {
     const fetchInitialData = async () => {
       setPageLoading(true);
       setErrorMsg(null);
       try {
-        // Fetch services
         const resServices = await fetch("/api/servicos?ativo=true");
         if (!resServices.ok) throw new Error("Erro ao carregar serviços");
         const servicesData = await resServices.json();
@@ -93,7 +104,6 @@ function AgendamentoContent() {
           setSelectedService(found || servicesData[0]);
         }
 
-        // Fetch config
         const resConfig = await fetch("/api/configuracoes");
         if (!resConfig.ok) throw new Error("Erro ao carregar configurações");
         const configData = await resConfig.json();
@@ -108,7 +118,6 @@ function AgendamentoContent() {
     fetchInitialData();
   }, [searchParams]);
 
-  // Fetch bookings and blocks when selected date changes
   useEffect(() => {
     if (selectedDay === null) {
       setActiveBookings([]);
@@ -133,7 +142,6 @@ function AgendamentoContent() {
           setAgendaBlocks(blocksData);
         }
       } catch {
-        // Silently catch slots errors to not block UI
       } finally {
         setSlotsLoading(false);
       }
@@ -173,9 +181,42 @@ function AgendamentoContent() {
 
   const isDayDisabled = (day: number) => {
     if (isPast(day)) return true;
-    if (!config?.dias_funcionamento) return false;
+
+    const holidayName = getHolidayName(calYear, calMonth, day);
+    if (holidayName !== null) {
+      const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
+      const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+      const isUnblocked = agendaBlocks.some((block: any) => {
+        if (block.motivo !== "DESBLOQUEIO_FERIADO") return false;
+        const blockStart = new Date(block.inicio);
+        const blockEnd = new Date(block.fim);
+        const overlapStart = new Date(Math.max(dayStart.getTime(), blockStart.getTime()));
+        const overlapEnd = new Date(Math.min(dayEnd.getTime(), blockEnd.getTime()));
+        return overlapStart < overlapEnd;
+      });
+      if (!isUnblocked) return true;
+    }
+
     const d = new Date(calYear, calMonth, day);
-    return !config.dias_funcionamento.includes(d.getDay());
+    if (!config?.dias_funcionamento || !config.dias_funcionamento.includes(d.getDay())) return true;
+
+    const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
+    const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+    const hasFullDayBlock = agendaBlocks.some((block: any) => {
+      if (block.motivo === "DESBLOQUEIO_FERIADO") return false;
+      const blockStart = new Date(block.inicio);
+      const blockEnd = new Date(block.fim);
+
+      const overlapStart = new Date(Math.max(dayStart.getTime(), blockStart.getTime()));
+      const overlapEnd = new Date(Math.min(dayEnd.getTime(), blockEnd.getTime()));
+      if (overlapStart < overlapEnd) {
+        const overlapDurationMs = overlapEnd.getTime() - overlapStart.getTime();
+        return overlapDurationMs >= 12 * 60 * 60 * 1000;
+      }
+      return false;
+    });
+
+    return hasFullDayBlock;
   };
 
   const isSlotDisabled = (time: string) => {
@@ -288,7 +329,6 @@ function AgendamentoContent() {
         </div>
       )}
 
-      {/* Page title */}
       <div className="text-center pt-10 pb-2">
         <p className="text-[10px] uppercase tracking-[0.2em] text-[#C49A82] font-semibold mb-2">
           Etapa 2 de 3
@@ -304,9 +344,7 @@ function AgendamentoContent() {
         </h1>
       </div>
 
-      {/* Main layout */}
       <main className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 items-start">
-        {/* Left column — Service summary only */}
         <div className="rounded-3xl border border-neutral-200/60 bg-white p-6 shadow-sm relative overflow-hidden space-y-4">
           <div
             className="absolute top-0 left-0 right-0 h-[3px]"
@@ -365,16 +403,14 @@ function AgendamentoContent() {
                     color: ACCENT,
                   }}
                 >
-                  R$ {selectedService.preco}
+                  € {selectedService.preco}
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right column — Calendar + Slots */}
         <div className="rounded-3xl border border-neutral-200/60 bg-white shadow-sm p-6 flex flex-col gap-6">
-          {/* Calendar header */}
           <div className="flex items-center justify-between">
             <h3
               className="text-lg text-[#2B2723] flex items-center gap-2"
@@ -406,7 +442,6 @@ function AgendamentoContent() {
             </div>
           </div>
 
-          {/* Days of week */}
           <div className="grid grid-cols-7 text-center border-b border-neutral-100 pb-2">
             {DAYS_OF_WEEK.map((d) => (
               <div
@@ -418,7 +453,6 @@ function AgendamentoContent() {
             ))}
           </div>
 
-          {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-y-1.5 -mt-3">
             {cells.map((day, i) => {
               if (!day) return <div key={i} />;
@@ -459,7 +493,6 @@ function AgendamentoContent() {
             <>
               <div className="border-t border-neutral-100" />
 
-              {/* Time slots */}
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-neutral-400 mb-4 font-semibold">
                   Horários Disponíveis{" "}
@@ -508,7 +541,6 @@ function AgendamentoContent() {
             </>
           )}
 
-          {/* Summary + Advance */}
           {selectedDay && selectedTime && selectedService && (
             <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between pt-4 border-t border-neutral-100 gap-4 mt-auto">
               <div>

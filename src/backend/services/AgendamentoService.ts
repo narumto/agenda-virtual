@@ -3,6 +3,7 @@ import { PacienteRepository } from "../repositories/PacienteRepository";
 import { ServicoRepository } from "../repositories/ServicoRepository";
 import { BloqueioAgendaRepository } from "../repositories/BloqueioAgendaRepository";
 import { ConfiguracaoService } from "./ConfiguracaoService";
+import { EmailService } from "./EmailService";
 import { Agendamento } from "../models/types";
 
 export class AgendamentoService {
@@ -27,14 +28,40 @@ export class AgendamentoService {
   async create(data: Partial<Agendamento>): Promise<Agendamento> {
     await this.validateAndPrepare(data);
 
-    return await this.repository.create({
+    const agendamento = await this.repository.create({
       paciente_id: data.paciente_id,
       servico_id: data.servico_id,
       inicio: data.inicio,
       fim: data.fim,
-      status: data.status || "PENDENTE",
+      status: "PENDENTE",
       observacao: data.observacao || null,
     });
+
+    try {
+      const paciente = await this.pacienteRepo.find(agendamento.paciente_id);
+      const servico = await this.servicoRepo.find(agendamento.servico_id);
+
+      if (paciente && paciente.email) {
+        const emailService = new EmailService();
+
+        const start = new Date(agendamento.inicio);
+        const formattedDate = start.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+        const formattedTime = start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+        await emailService.sendConfirmationEmail(
+          paciente.email,
+          agendamento.id,
+          paciente.nome,
+          servico?.nome || "Serviço",
+          formattedDate,
+          formattedTime
+        );
+      }
+    } catch (err) {
+      console.error("Erro ao disparar e-mail de confirmação:", err);
+    }
+
+    return agendamento;
   }
 
   async update(id: string, data: Partial<Agendamento>): Promise<Agendamento> {

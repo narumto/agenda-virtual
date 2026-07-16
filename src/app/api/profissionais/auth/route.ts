@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 8, // 8 hours
+      maxAge: 60 * 60 * 8, 
     });
 
     return res;
@@ -41,14 +41,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** DELETE /api/profissionais/auth — Logout */
 export async function DELETE() {
   const res = NextResponse.json({ message: "Logout realizado" });
   res.cookies.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
   return res;
 }
 
-/** GET /api/profissionais/auth — Verify session (used client-side) */
 export async function GET(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) return NextResponse.json({ authenticated: false }, { status: 401 });

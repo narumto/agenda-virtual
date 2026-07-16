@@ -14,6 +14,9 @@ export class ConfiguracaoService {
         almoco_inicio: "12:00:00",
         almoco_fim: "13:00:00",
         dias_funcionamento: [1, 2, 3, 4, 5],
+        telefone: "+351 912 345 678",
+        logo_url: "/logo.png",
+        nome_site: "Cristiane Vasconcelos Clinic",
       };
       return await this.repository.create(defaultConfig);
     }
@@ -44,6 +47,9 @@ export class ConfiguracaoService {
     if (data.almoco_inicio !== undefined) updateData.almoco_inicio = data.almoco_inicio;
     if (data.almoco_fim !== undefined) updateData.almoco_fim = data.almoco_fim;
     if (data.dias_funcionamento !== undefined) updateData.dias_funcionamento = data.dias_funcionamento;
+    if (data.telefone !== undefined) updateData.telefone = data.telefone;
+    if (data.logo_url !== undefined) updateData.logo_url = data.logo_url;
+    if (data.nome_site !== undefined) updateData.nome_site = data.nome_site;
 
     return await this.repository.update(true, updateData);
   }

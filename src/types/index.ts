@@ -3,6 +3,7 @@
 export interface UserProfile {
   nome: string;
   foto_url: string;
+  role?: "paciente" | "profissional";
 }
 
 // ── Categories & Services ──

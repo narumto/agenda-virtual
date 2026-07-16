@@ -17,9 +17,9 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Agenda Virtual — Estética & Bem-estar",
+  title: "Cristiane Vasconcelos Clinic — Agendamento de Serviços",
   description:
-    "Agende seus procedimentos de estética e bem-estar com facilidade. Escolha o serviço, data e profissional ideal para você.",
+    "Agende seus procedimentos na Cristiane Vasconcelos Clinic com facilidade. Escolha o serviço, data e profissional ideal para você.",
 };
 
 export default function RootLayout({

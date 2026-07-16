@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, CalendarDays } from "lucide-react";
+import { User, LogOut, CalendarDays, Sparkles } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { ACCENT } from "@/config/constants";
 import type { UserProfile } from "@/types";
@@ -65,11 +65,24 @@ export function UserAvatarDropdown({
 
           {/* Options */}
           <div className="py-1.5">
+            {userProfile?.role === "profissional" && (
+              <button
+                id="dropdown-voltar-painel"
+                onClick={() => {
+                  setOpen(false);
+                  router.push("/painel");
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 transition-colors cursor-pointer text-amber-800"
+              >
+                <Sparkles size={15} className="text-amber-600" />
+                Painel Administrativo
+              </button>
+            )}
             <button
               id="dropdown-minha-conta"
               onClick={() => {
                 setOpen(false);
-                router.push("/login");
+                router.push("/minha-conta");
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
             >

@@ -143,7 +143,7 @@ function AgendamentoCard({
               style={{ color: ACCENT }}
             >
               <Banknote size={13} className="shrink-0" />
-              <span>R$ {preco}</span>
+              <span>€ {preco}</span>
             </div>
           )}
         </div>
@@ -220,41 +220,69 @@ export default function MeusAgendamentosPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
+  const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.push("/login");
-          return;
+        const { data: { session } } = await supabase.auth.getSession();
+        let userEmail = "";
+        let googleId = "";
+        let userName = "";
+        let userFoto = "";
+        let isPro = false;
+
+        if (session?.user) {
+          userEmail = session.user.email || "";
+          googleId = session.user.id;
+          userName = session.user.user_metadata?.full_name || "Usuário";
+          userFoto = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "";
+        } else {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              isPro = true;
+            } else {
+              router.push("/login");
+              return;
+            }
+          } else {
+            router.push("/login");
+            return;
+          }
         }
 
-        // Get paciente_id via verify
-        const savedRole =
-          localStorage.getItem("google_login_role") || "paciente";
-        const res = await fetch("/api/auth/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: session.user.email,
-            google_id: session.user.id,
-            nome: session.user.user_metadata?.full_name || "Usuário",
-            foto_url: session.user.user_metadata?.avatar_url || "",
-            role: savedRole,
-          }),
-        });
-        const userData = await res.json();
-        if (!res.ok) throw new Error(userData.message);
+        if (!isPro) {
+          const savedRole = localStorage.getItem("google_login_role") || "paciente";
+          const res = await fetch("/api/auth/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: userEmail,
+              google_id: googleId,
+              nome: userName,
+              foto_url: userFoto,
+              role: savedRole,
+            }),
+          });
+          const userData = await res.json();
+          if (!res.ok) throw new Error(userData.message);
 
-        const pid = userData.data.id;
+          const pid = userData.data.id;
+          const resAg = await fetch(`/api/agendamentos?paciente_id=${pid}`);
+          if (!resAg.ok) throw new Error("Erro ao carregar agendamentos");
+          const agData = await resAg.json();
+          setAgendamentos(agData);
+        } else {
+          setAgendamentos([]);
+        }
 
-        const resAg = await fetch(`/api/agendamentos?paciente_id=${pid}`);
-        if (!resAg.ok) throw new Error("Erro ao carregar agendamentos");
-        const agData = await resAg.json();
-        setAgendamentos(agData);
+        const resConfig = await fetch("/api/configuracoes");
+        if (resConfig.ok) {
+          const configData = await resConfig.json();
+          setConfig(configData);
+        }
       } catch (err: any) {
         setErrorMsg(err.message || "Erro ao carregar dados.");
       } finally {
@@ -289,13 +317,8 @@ export default function MeusAgendamentosPage() {
     }
   };
 
-  // Split upcoming vs history
-  const upcoming = agendamentos.filter((a) =>
-    isUpcoming(a.inicio, a.status),
-  );
-  const history = agendamentos.filter(
-    (a) => !isUpcoming(a.inicio, a.status),
-  );
+  const upcoming = agendamentos.filter((a) => isUpcoming(a.inicio, a.status));
+  const history = agendamentos.filter((a) => !isUpcoming(a.inicio, a.status));
 
   if (loading) {
     return (

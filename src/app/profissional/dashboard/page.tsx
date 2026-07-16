@@ -83,7 +83,7 @@ export default function ProfessionalDashboard() {
         <div className="bg-white rounded-3xl border border-neutral-200/60 p-8 shadow-sm space-y-6">
           <h2
             className="text-2xl text-[#2B2723]"
-            style={{ fontFamily: "'Playfair Display', serif', fontWeight: 500" }}
+            style={{ fontFamily: "'Playfair Display', serif", fontWeight: 500 }}
           >
             Área do Profissional
           </h2>

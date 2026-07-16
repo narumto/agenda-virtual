@@ -2,13 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import { siteConfig } from "@/config/site";
-
-// Initialize client-side Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from "@/lib/supabase";
+import { siteConfig, ACCENT } from "@/config/constants";
+import type { UserProfile } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +13,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [sessionUser, setSessionUser] = useState<any | null>(null);
-  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
 
   // Sync session and handle verify on load or redirects
@@ -27,7 +23,10 @@ export default function LoginPage() {
     const checkSessionAndVerify = async () => {
       setErrorMsg(null);
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) throw error;
 
         if (session?.user) {
@@ -49,7 +48,9 @@ export default function LoginPage() {
     checkSessionAndVerify();
 
     // Listen for auth state changes (e.g. SIGNED_IN after OAuth redirect flow)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         if (active) {
           setSessionUser(session.user);
@@ -81,14 +82,18 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/auth/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
           google_id: user.id,
-          nome: user.user_metadata?.full_name || user.user_metadata?.name || "Usuário Google",
-          foto_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || "",
+          nome:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            "Usuário Google",
+          foto_url:
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            "",
           role: savedRole,
         }),
       });
@@ -114,7 +119,9 @@ export default function LoginPage() {
         router.push("/");
       }, 2000);
     } catch (err: any) {
-      setErrorMsg(err.message || "Não foi possível sincronizar sua conta com a API.");
+      setErrorMsg(
+        err.message || "Não foi possível sincronizar sua conta com a API.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +145,9 @@ export default function LoginPage() {
 
       if (error) throw error;
     } catch (err: any) {
-      setErrorMsg(err.message || "Não foi possível iniciar o login com o Google.");
+      setErrorMsg(
+        err.message || "Não foi possível iniciar o login com o Google.",
+      );
       setIsLoading(false);
     }
   };
@@ -180,7 +189,8 @@ export default function LoginPage() {
             Viva o seu bem-estar.
           </h1>
           <p className="text-white/80 max-w-md text-sm lg:text-base leading-relaxed font-light">
-            Procedimentos estéticos personalizados com profissionais qualificados. Acesse e agende o seu momento.
+            Procedimentos estéticos personalizados com profissionais
+            qualificados. Acesse e agende o seu momento.
           </p>
         </div>
       </div>
@@ -208,8 +218,18 @@ export default function LoginPage() {
               onClick={() => setErrorMsg(null)}
               className="ml-auto text-rose-400 hover:text-rose-600 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -236,8 +256,18 @@ export default function LoginPage() {
               onClick={() => setSuccessMsg(null)}
               className="ml-auto text-emerald-400 hover:text-emerald-600 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -259,10 +289,9 @@ export default function LoginPage() {
                 {sessionUser ? "Sua Conta" : "Acesse sua Conta"}
               </h2>
               <p className="text-neutral-500 text-sm max-w-sm leading-relaxed">
-                {sessionUser 
-                  ? "Você está autenticado no portal de agendamentos." 
-                  : `Bem-vindo ao ${siteConfig.name}. Escolha sua opção de acesso e faça login com segurança.`
-                }
+                {sessionUser
+                  ? "Você está autenticado no portal de agendamentos."
+                  : `Bem-vindo ao ${siteConfig.name}. Escolha sua opção de acesso e faça login com segurança.`}
               </p>
             </div>
           </div>
@@ -273,8 +302,8 @@ export default function LoginPage() {
               <div className="flex items-center gap-4">
                 <img
                   src={
-                    sessionUser.user_metadata?.avatar_url || 
-                    sessionUser.user_metadata?.picture || 
+                    sessionUser.user_metadata?.avatar_url ||
+                    sessionUser.user_metadata?.picture ||
                     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100&q=80"
                   }
                   alt={userProfile?.nome || "Usuário"}
@@ -282,9 +311,13 @@ export default function LoginPage() {
                 />
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-semibold text-neutral-800 truncate">
-                    {userProfile?.nome || sessionUser.user_metadata?.full_name || "Usuário Google"}
+                    {userProfile?.nome ||
+                      sessionUser.user_metadata?.full_name ||
+                      "Usuário Google"}
                   </h3>
-                  <p className="text-sm text-neutral-500 truncate">{sessionUser.email}</p>
+                  <p className="text-sm text-neutral-500 truncate">
+                    {sessionUser.email}
+                  </p>
                 </div>
               </div>
 
@@ -295,24 +328,31 @@ export default function LoginPage() {
                     {role === "paciente" ? "Paciente" : "Profissional"}
                   </span>
                 </div>
-                {userProfile?.telefone && (
+                {(userProfile as any)?.telefone && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-neutral-400">Telefone:</span>
-                    <span className="text-neutral-700 font-medium">{userProfile.telefone}</span>
-                  </div>
-                )}
-                {role === "profissional" && userProfile?.status_acesso && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-neutral-400">Status de Liberação:</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
-                      userProfile.status_acesso === "ativo" 
-                        ? "bg-emerald-100 text-emerald-800" 
-                        : "bg-amber-100 text-amber-800"
-                    }`}>
-                      {userProfile.status_acesso}
+                    <span className="text-neutral-700 font-medium">
+                      {(userProfile as any).telefone}
                     </span>
                   </div>
                 )}
+                {role === "profissional" &&
+                  (userProfile as any)?.status_acesso && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-neutral-400">
+                        Status de Liberação:
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
+                          (userProfile as any).status_acesso === "ativo"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {(userProfile as any).status_acesso}
+                      </span>
+                    </div>
+                  )}
               </div>
 
               <button
@@ -323,8 +363,18 @@ export default function LoginPage() {
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-neutral-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
                   </svg>
                 )}
                 <span>Sair da Conta</span>
@@ -343,8 +393,8 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setRole("paciente")}
                     className={`py-2 text-sm font-semibold rounded-full transition-all duration-300 cursor-pointer relative z-10 ${
-                      role === "paciente" 
-                        ? "text-[#2B2723] bg-white shadow-sm" 
+                      role === "paciente"
+                        ? "text-[#2B2723] bg-white shadow-sm"
                         : "text-neutral-500 hover:text-neutral-700"
                     }`}
                   >
@@ -389,7 +439,9 @@ export default function LoginPage() {
                     />
                   </svg>
                 )}
-                <span>{isLoading ? "Processando..." : "Continuar com o Google"}</span>
+                <span>
+                  {isLoading ? "Processando..." : "Continuar com o Google"}
+                </span>
               </button>
             </div>
           )}
@@ -397,14 +449,16 @@ export default function LoginPage() {
           {/* Rodapé Legal */}
           <div className="text-center md:text-left pt-6 border-t border-neutral-100">
             <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mx-auto md:mx-0">
-              Sua privacidade é muito importante para nós. Ao continuar, você declara concordar com nossos{" "}
+              Sua privacidade é muito importante para nós. Ao continuar, você
+              declara concordar com nossos{" "}
               <a href="#" className="text-[#C49A82] hover:underline">
                 Termos de Serviço
               </a>{" "}
               e{" "}
               <a href="#" className="text-[#C49A82] hover:underline">
                 Políticas de Privacidade
-              </a>.
+              </a>
+              .
             </p>
           </div>
         </div>

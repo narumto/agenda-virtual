@@ -21,7 +21,6 @@ export class ProfissionalAuthService {
     const senhaCorreta = await bcrypt.compare(senha, profissional.senha_hash);
     if (!senhaCorreta) throw new Error("Credenciais inválidas");
 
-    // Return without sensitive fields
     const { senha_hash, ...safe } = profissional as any;
     return safe;
   }

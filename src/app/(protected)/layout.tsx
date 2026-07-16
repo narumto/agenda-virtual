@@ -25,6 +25,16 @@ export default function ProtectedLayout({
         if (error) throw error;
 
         if (!session) {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              if (active) {
+                setLoading(false);
+              }
+              return;
+            }
+          }
           if (active) {
             router.push("/login");
           }
@@ -42,9 +52,20 @@ export default function ProtectedLayout({
 
     checkAuth();
 
-    // Listen to changes in auth state (e.g. if session expires or user logs out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" || !session) {
+        try {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              return;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+
         if (active) {
           router.push("/login");
         }

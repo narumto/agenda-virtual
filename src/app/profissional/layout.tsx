@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Área do Profissional — Agenda Virtual",
+  title: "Área do Profissional — Cristiane Vasconcelos Clinic",
   description: "Acesso restrito a profissionais da equipe.",
 };
 

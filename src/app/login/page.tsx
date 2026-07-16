@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
 
-// Initialize client-side Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -19,8 +18,23 @@ export default function LoginPage() {
   const [sessionUser, setSessionUser] = useState<any | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [config, setConfig] = useState<any>(null);
 
-  // Sync session and handle verify on load or redirects
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch("/api/configuracoes");
+        if (res.ok) {
+          const configData = await res.json();
+          setConfig(configData);
+        }
+      } catch (e) {
+        console.error("Error loading config", e);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -31,7 +45,6 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (session?.user) {
-          // Usuário já está logado — redirecionar imediatamente sem renderizar login
           router.replace("/");
           return;
         }
@@ -48,7 +61,6 @@ export default function LoginPage() {
 
     checkSessionAndVerify();
 
-    // Listen for auth state changes (e.g. SIGNED_IN after OAuth redirect flow)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         if (active) {
@@ -75,7 +87,6 @@ export default function LoginPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Retrieve the selected role from localStorage to handle state loss across redirect
     const savedRole = localStorage.getItem("google_login_role") || "paciente";
 
     try {
@@ -126,7 +137,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Save selected role before redirecting
       localStorage.setItem("google_login_role", role);
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -158,12 +168,10 @@ export default function LoginPage() {
     }
   };
 
-  // Enquanto verifica sessão, não renderiza nada para evitar flash do formulário
   if (checkingSession) return null;
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#FAF9F6] font-sans">
-      {/* Lado Esquerdo: Imagem (Desktop) */}
       <div className="hidden md:block relative w-full h-full overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=1200&q=80"
@@ -185,9 +193,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Lado Direito: Interface Principal */}
       <div className="flex flex-col justify-center items-center px-6 py-12 md:px-12 lg:px-20 relative min-h-screen">
-        {/* Banner de Erro */}
         {errorMsg && (
           <div className="w-full max-w-md absolute top-6 left-6 right-6 md:left-auto md:right-auto bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl flex items-start gap-3 shadow-md animate-fade-in z-50">
             <svg
@@ -215,7 +221,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Banner de Sucesso */}
         {successMsg && (
           <div className="w-full max-w-md absolute top-6 left-6 right-6 md:left-auto md:right-auto bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-start gap-3 shadow-md animate-fade-in z-50">
             <svg
@@ -244,12 +249,11 @@ export default function LoginPage() {
         )}
 
         <div className="w-full max-w-md space-y-10">
-          {/* Logo e Cabeçalho */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-6">
             <img
-              src={siteConfig.logoUrl}
-              alt={siteConfig.name}
-              className="w-16 h-16 rounded-2xl object-cover shadow-md ring-4 ring-[#C49A82]/10"
+              src={config?.logo_url || siteConfig.logoUrl}
+              alt={config?.nome_site || siteConfig.name}
+              className="w-20 h-20 rounded-2xl object-cover shadow-md ring-4 ring-[#C49A82]/10"
             />
             <div className="space-y-3">
               <h2
@@ -261,13 +265,12 @@ export default function LoginPage() {
               <p className="text-neutral-500 text-sm max-w-sm leading-relaxed">
                 {sessionUser 
                   ? "Você está autenticado no portal de agendamentos." 
-                  : `Bem-vindo ao ${siteConfig.name}. Escolha sua opção de acesso e faça login com segurança.`
+                  : `Bem-vindo ao ${config?.nome_site || siteConfig.name}. Escolha sua opção de acesso e faça login com segurança.`
                 }
               </p>
             </div>
           </div>
 
-          {/* Estado: Logado */}
           {sessionUser ? (
             <div className="bg-white rounded-3xl p-6 border border-neutral-100 shadow-md space-y-6 animate-fade-in">
               <div className="flex items-center gap-4">
@@ -331,9 +334,7 @@ export default function LoginPage() {
               </button>
             </div>
           ) : (
-            /* Estado: Não Logado */
             <div className="space-y-6">
-              {/* Seletor de Perfil (Role) */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-neutral-400 tracking-wider uppercase">
                   Acessar como:
@@ -360,7 +361,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Botão Google Login */}
               <button
                 id="btn-google-login"
                 onClick={handleGoogleClick}
@@ -394,7 +394,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Rodapé Legal */}
           <div className="text-center md:text-left pt-6 border-t border-neutral-100">
             <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mx-auto md:mx-0">
               Sua privacidade é muito importante para nós. Ao continuar, você declara concordar com nossos{" "}

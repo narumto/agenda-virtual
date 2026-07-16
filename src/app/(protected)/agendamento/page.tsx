@@ -15,8 +15,22 @@ import {
 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
+import Holidays from "date-holidays";
 
-// Initialize Supabase Client
+const hd = new Holidays("PT");
+
+const getHolidayName = (year: number, month: number, day: number): string | null => {
+  const d = new Date(year, month, day);
+  const holiday = hd.isHoliday(d) as any;
+  if (holiday) {
+    if (Array.isArray(holiday)) {
+      return holiday[0].name;
+    }
+    return holiday.name;
+  }
+  return null;
+};
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -46,6 +60,10 @@ interface Config {
   almoco_inicio: string;
   almoco_fim: string;
   dias_funcionamento: number[];
+  telefone?: string;
+  logo_url?: string;
+  nome_site?: string;
+  site_url?: string;
 }
 
 function buildCalendar(year: number, month: number) {
@@ -63,20 +81,17 @@ export default function AgendamentoPage() {
   const today = new Date();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Navigation and State
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Dynamic Backend Data State
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [activeBookings, setActiveBookings] = useState<any[]>([]);
   const [agendaBlocks, setAgendaBlocks] = useState<any[]>([]);
 
-  // User profile + dropdown
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -86,22 +101,32 @@ export default function AgendamentoPage() {
 
   const cells = buildCalendar(calYear, calMonth);
 
-  // Load initial backend data
   useEffect(() => {
     const fetchInitialData = async () => {
       setPageLoading(true);
       setErrorMsg(null);
       try {
-        // Fetch user session
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUserProfile({
             nome: session.user.user_metadata?.full_name || "Usuário",
             foto_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "",
+            role: "paciente",
           });
+        } else {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              setUserProfile({
+                nome: data.data.nome,
+                foto_url: data.data.foto_url || "",
+                role: "profissional",
+              });
+            }
+          }
         }
 
-        // Fetch services
         const resServices = await fetch("/api/servicos?ativo=true");
         if (!resServices.ok) throw new Error("Erro ao carregar serviços");
         const servicesData = await resServices.json();
@@ -113,7 +138,6 @@ export default function AgendamentoPage() {
           setSelectedService(found || servicesData[0]);
         }
 
-        // Fetch config
         const resConfig = await fetch("/api/configuracoes");
         if (!resConfig.ok) throw new Error("Erro ao carregar configurações");
         const configData = await resConfig.json();
@@ -128,7 +152,6 @@ export default function AgendamentoPage() {
     fetchInitialData();
   }, []);
 
-  // Fetch bookings and blocks when selected date changes
   useEffect(() => {
     if (selectedDay === null) {
       setActiveBookings([]);
@@ -151,7 +174,6 @@ export default function AgendamentoPage() {
           setAgendaBlocks(blocksData);
         }
       } catch {
-        // Silently catch slots errors to not block UI
       } finally {
         setSlotsLoading(false);
       }
@@ -160,7 +182,6 @@ export default function AgendamentoPage() {
     fetchAvailabilityData();
   }, [selectedDay, calYear, calMonth]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -193,9 +214,42 @@ export default function AgendamentoPage() {
 
   const isDayDisabled = (day: number) => {
     if (isPast(day)) return true;
-    if (!config?.dias_funcionamento) return false;
+
+    const holidayName = getHolidayName(calYear, calMonth, day);
+    if (holidayName !== null) {
+      const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
+      const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+      const isUnblocked = agendaBlocks.some((block: any) => {
+        if (block.motivo !== "DESBLOQUEIO_FERIADO") return false;
+        const blockStart = new Date(block.inicio);
+        const blockEnd = new Date(block.fim);
+        const overlapStart = new Date(Math.max(dayStart.getTime(), blockStart.getTime()));
+        const overlapEnd = new Date(Math.min(dayEnd.getTime(), blockEnd.getTime()));
+        return overlapStart < overlapEnd;
+      });
+      if (!isUnblocked) return true;
+    }
+
     const d = new Date(calYear, calMonth, day);
-    return !config.dias_funcionamento.includes(d.getDay());
+    if (!config?.dias_funcionamento || !config.dias_funcionamento.includes(d.getDay())) return true;
+
+    const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
+    const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+    const hasFullDayBlock = agendaBlocks.some((block: any) => {
+      if (block.motivo === "DESBLOQUEIO_FERIADO") return false;
+      const blockStart = new Date(block.inicio);
+      const blockEnd = new Date(block.fim);
+
+      const overlapStart = new Date(Math.max(dayStart.getTime(), blockStart.getTime()));
+      const overlapEnd = new Date(Math.min(dayEnd.getTime(), blockEnd.getTime()));
+      if (overlapStart < overlapEnd) {
+        const overlapDurationMs = overlapEnd.getTime() - overlapStart.getTime();
+        return overlapDurationMs >= 12 * 60 * 60 * 1000;
+      }
+      return false;
+    });
+
+    return hasFullDayBlock;
   };
 
   const getLocalDateTimeString = (year: number, month: number, day: number, time: string) => {
@@ -260,8 +314,13 @@ export default function AgendamentoPage() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    if (userProfile?.role === "profissional") {
+      await fetch("/api/profissionais/auth", { method: "DELETE" });
+      window.location.href = "/profissional/login";
+    } else {
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
   };
 
   if (pageLoading) {
@@ -277,11 +336,9 @@ export default function AgendamentoPage() {
       className="min-h-screen bg-[#FAF9F6]"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
-      {/* Header — igual ao da home */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-neutral-100 px-6 py-4 md:px-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
 
-          {/* Left: Back + Logo */}
           <div className="flex items-center gap-4">
             <button
               id="btn-back"
@@ -295,22 +352,20 @@ export default function AgendamentoPage() {
             <div className="w-px h-5 bg-neutral-200" />
 
             <div className="flex items-center gap-2.5">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: ACCENT }}
-              >
-                <Sparkles size={14} className="text-white" />
-              </div>
+              <img
+                src={config?.logo_url || "/logo.png"}
+                alt="Logo"
+                className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-neutral-200 shrink-0"
+              />
               <span
                 className="text-[15px] text-neutral-900 hidden sm:block"
                 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}
               >
-                {siteConfig.name}
+                {config?.nome_site || siteConfig.name}
               </span>
             </div>
           </div>
 
-          {/* Center: Breadcrumb */}
           <div className="hidden md:flex items-center gap-2 text-xs text-neutral-400">
             <span>Serviços</span>
             <ChevronRight size={11} className="opacity-40" />
@@ -319,7 +374,6 @@ export default function AgendamentoPage() {
             <span>Confirmação</span>
           </div>
 
-          {/* Right: Avatar dropdown */}
           <div className="relative shrink-0" ref={dropdownRef}>
             <button
               id="btn-avatar-menu"
@@ -346,19 +400,26 @@ export default function AgendamentoPage() {
               />
             </button>
 
-            {/* Dropdown */}
             {dropdownOpen && (
               <div className="absolute right-0 mt-3 w-52 bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden z-50" style={{ animation: "fadeIn .15s ease" }}>
                 <div className="px-4 py-3 border-b border-neutral-50">
                   <p className="text-xs text-neutral-400 mb-0.5">Logado como</p>
-                  <p className="text-sm font-semibold text-neutral-800 truncate">
-                    {userProfile?.nome || "Usuário"}
-                  </p>
+                  <p className="text-sm font-semibold text-neutral-800 truncate">{userProfile?.nome || "Usuário"}</p>
                 </div>
                 <div className="py-1.5">
+                  {userProfile?.role === "profissional" && (
+                    <button
+                      id="dropdown-voltar-painel"
+                      onClick={() => { setDropdownOpen(false); router.push("/painel"); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 transition-colors cursor-pointer text-amber-800"
+                    >
+                      <Sparkles size={15} className="text-amber-600" />
+                      Painel Administrativo
+                    </button>
+                  )}
                   <button
                     id="dropdown-minha-conta"
-                    onClick={() => { setDropdownOpen(false); router.push("/login"); }}
+                    onClick={() => { setDropdownOpen(false); router.push("/minha-conta"); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
                   >
                     <User size={15} className="text-neutral-400" />
@@ -394,7 +455,6 @@ export default function AgendamentoPage() {
         </div>
       )}
 
-      {/* Page title */}
       <div className="text-center pt-10 pb-2">
         <p className="text-[10px] uppercase tracking-[0.2em] text-[#C49A82] font-semibold mb-2">
           Etapa 2 de 3
@@ -407,10 +467,8 @@ export default function AgendamentoPage() {
         </h1>
       </div>
 
-      {/* Main layout */}
       <main className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 items-start">
 
-        {/* Left column — Service summary only */}
         <div className="rounded-3xl border border-neutral-200/60 bg-white p-6 shadow-sm relative overflow-hidden space-y-4">
           <div
             className="absolute top-0 left-0 right-0 h-[3px]"
@@ -455,17 +513,15 @@ export default function AgendamentoPage() {
                   className="text-2xl font-light ml-auto"
                   style={{ fontFamily: "'Playfair Display', serif", color: ACCENT }}
                 >
-                  R$ {selectedService.preco}
+                  € {selectedService.preco}
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right column — Calendar + Slots */}
         <div className="rounded-3xl border border-neutral-200/60 bg-white shadow-sm p-6 flex flex-col gap-6">
 
-          {/* Calendar header */}
           <div className="flex items-center justify-between">
             <h3
               className="text-lg text-[#2B2723] flex items-center gap-2"
@@ -492,7 +548,6 @@ export default function AgendamentoPage() {
             </div>
           </div>
 
-          {/* Days of week */}
           <div className="grid grid-cols-7 text-center border-b border-neutral-100 pb-2">
             {DAYS_OF_WEEK.map((d) => (
               <div key={d} className="text-[10px] uppercase tracking-[0.1em] text-neutral-400 py-1 font-semibold">
@@ -501,7 +556,6 @@ export default function AgendamentoPage() {
             ))}
           </div>
 
-          {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-y-1.5 -mt-3">
             {cells.map((day, i) => {
               if (!day) return <div key={i} />;
@@ -535,7 +589,6 @@ export default function AgendamentoPage() {
             <>
               <div className="border-t border-neutral-100" />
 
-              {/* Time slots */}
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-neutral-400 mb-4 font-semibold">
                   Horários Disponíveis {slotsLoading && " (Verificando...)"}
@@ -593,7 +646,6 @@ export default function AgendamentoPage() {
             </>
           )}
 
-          {/* Summary + Advance */}
           {selectedDay && selectedTime && selectedService && (
             <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between pt-4 border-t border-neutral-100 gap-4 mt-auto">
               <div>

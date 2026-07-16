@@ -14,7 +14,14 @@ export class AgendamentoResource extends BaseResource<Agendamento> {
       observacao: r.observacao || null,
       created_at: r.created_at,
       updated_at: r.updated_at,
-      // Enriched from join (present when fetched via listByPatient)
+      paciente: r.pacientes
+        ? {
+            id: r.pacientes.id,
+            nome: r.pacientes.nome,
+            telefone: r.pacientes.telefone,
+            email: r.pacientes.email,
+          }
+        : null,
       servico: r.servicos
         ? {
             id: r.servicos.id,

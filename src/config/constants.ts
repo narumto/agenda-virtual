@@ -1,7 +1,6 @@
-export const LOGO_URL =
-  "https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80";
+export const LOGO_URL = "/logo.png";
 
-export const SITE_NAME = "Agenda Virtual";
+export const SITE_NAME = "Cristiane Vasconcelos Clinic";
 
 export const WHATSAPP_NUMERO = "+351 912 345 678";
 

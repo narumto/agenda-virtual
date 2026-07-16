@@ -75,42 +75,78 @@ export default function MeusAgendamentosPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<string | null>(null); // id to confirm cancel
+  const [confirmCancel, setConfirmCancel] = useState<string | null>(null); 
+  const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
     const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) { router.push("/login"); return; }
+        let userEmail = "";
+        let googleId = "";
+        let userName = "";
+        let userFoto = "";
+        let isPro = false;
 
-        setUserProfile({
-          nome: session.user.user_metadata?.full_name || "Usuário",
-          foto_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "",
-        });
+        if (session?.user) {
+          userEmail = session.user.email || "";
+          googleId = session.user.id;
+          userName = session.user.user_metadata?.full_name || "Usuário";
+          userFoto = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "";
+          setUserProfile({ nome: userName, foto_url: userFoto, role: "paciente" });
+        } else {
+          const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              isPro = true;
+              setUserProfile({
+                nome: data.data.nome,
+                foto_url: data.data.foto_url || "",
+                role: "profissional",
+              });
+            } else {
+              router.push("/login");
+              return;
+            }
+          } else {
+            router.push("/login");
+            return;
+          }
+        }
 
-        // Get paciente_id via verify
-        const savedRole = localStorage.getItem("google_login_role") || "paciente";
-        const res = await fetch("/api/auth/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: session.user.email,
-            google_id: session.user.id,
-            nome: session.user.user_metadata?.full_name || "Usuário",
-            foto_url: session.user.user_metadata?.avatar_url || "",
-            role: savedRole,
-          }),
-        });
-        const userData = await res.json();
-        if (!res.ok) throw new Error(userData.message);
+        if (!isPro) {
+          const savedRole = localStorage.getItem("google_login_role") || "paciente";
+          const res = await fetch("/api/auth/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: userEmail,
+              google_id: googleId,
+              nome: userName,
+              foto_url: userFoto,
+              role: savedRole,
+            }),
+          });
+          const userData = await res.json();
+          if (!res.ok) throw new Error(userData.message);
 
-        const pid = userData.data.id;
-        setPacienteId(pid);
+          const pid = userData.data.id;
+          setPacienteId(pid);
 
-        const resAg = await fetch(`/api/agendamentos?paciente_id=${pid}`);
-        if (!resAg.ok) throw new Error("Erro ao carregar agendamentos");
-        const agData = await resAg.json();
-        setAgendamentos(agData);
+          const resAg = await fetch(`/api/agendamentos?paciente_id=${pid}`);
+          if (!resAg.ok) throw new Error("Erro ao carregar agendamentos");
+          const agData = await resAg.json();
+          setAgendamentos(agData);
+        } else {
+          setAgendamentos([]);
+        }
+
+        const resConfig = await fetch("/api/configuracoes");
+        if (resConfig.ok) {
+          const configData = await resConfig.json();
+          setConfig(configData);
+        }
       } catch (err: any) {
         setErrorMsg(err.message || "Erro ao carregar dados.");
       } finally {
@@ -130,8 +166,13 @@ export default function MeusAgendamentosPage() {
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    if (userProfile?.role === "profissional") {
+      await fetch("/api/profissionais/auth", { method: "DELETE" });
+      window.location.href = "/profissional/login";
+    } else {
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
   };
 
   const handleCancel = async (id: string) => {
@@ -157,7 +198,6 @@ export default function MeusAgendamentosPage() {
     }
   };
 
-  // Split upcoming vs history
   const upcoming = agendamentos.filter((a) => isUpcoming(a.inicio, a.status));
   const history = agendamentos.filter((a) => !isUpcoming(a.inicio, a.status));
 
@@ -187,14 +227,16 @@ export default function MeusAgendamentosPage() {
             </button>
             <div className="w-px h-5 bg-neutral-200" />
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: ACCENT }}>
-                <Sparkles size={14} className="text-white" />
-              </div>
+               <img
+                 src={config?.logo_url || "/logo.png"}
+                 alt="Logo"
+                 className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-neutral-200 shrink-0"
+               />
               <span
                 className="text-[15px] text-neutral-900 hidden sm:block"
                 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}
               >
-                {siteConfig.name}
+                {config?.nome_site || siteConfig.name}
               </span>
             </div>
           </div>
@@ -224,7 +266,13 @@ export default function MeusAgendamentosPage() {
                   <p className="text-sm font-semibold text-neutral-800 truncate">{userProfile?.nome || "Usuário"}</p>
                 </div>
                 <div className="py-1.5">
-                  <button onClick={() => { setDropdownOpen(false); router.push("/login"); }}
+                  {userProfile?.role === "profissional" && (
+                    <button onClick={() => { setDropdownOpen(false); router.push("/painel"); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 transition-colors cursor-pointer text-amber-800">
+                      <Sparkles size={15} className="text-amber-600" />Painel Administrativo
+                    </button>
+                  )}
+                  <button onClick={() => { setDropdownOpen(false); router.push("/minha-conta"); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer">
                     <User size={15} className="text-neutral-400" />Minha Conta
                   </button>
@@ -362,7 +410,6 @@ export default function MeusAgendamentosPage() {
   );
 }
 
-// ── Card component ──
 function AgendamentoCard({
   agendamento: a,
   onCancel,
@@ -410,7 +457,7 @@ function AgendamentoCard({
           {preco !== undefined && (
             <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: ACCENT }}>
               <Banknote size={13} className="shrink-0" />
-              <span>R$ {preco}</span>
+              <span>€ {preco}</span>
             </div>
           )}
         </div>
@@ -442,7 +489,6 @@ function AgendamentoCard({
   );
 }
 
-// ── Empty state ──
 function EmptyState({ label, sub, action }: { label: string; sub: string; action?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">

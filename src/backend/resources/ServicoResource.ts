@@ -12,6 +12,7 @@ export class ServicoResource extends BaseResource<Servico> {
       duracao_minutos: this.resource.duracao_minutos,
       preco: Number(this.resource.preco),
       ativo: this.resource.ativo,
+      sob_consulta: Boolean(this.resource.sob_consulta),
       created_at: this.resource.created_at,
       updated_at: this.resource.updated_at,
     };

@@ -45,6 +45,7 @@ export class ServicoService {
       duracao_minutos: Number(data.duracao_minutos),
       preco: Number(data.preco),
       ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
+      sob_consulta: data.sob_consulta !== undefined ? Boolean(data.sob_consulta) : false,
     });
   }
 
@@ -71,6 +72,7 @@ export class ServicoService {
       updateData.preco = Number(data.preco);
     }
     if (data.ativo !== undefined) updateData.ativo = Boolean(data.ativo);
+    if (data.sob_consulta !== undefined) updateData.sob_consulta = Boolean(data.sob_consulta);
 
     return await this.repository.update(id, updateData);
   }

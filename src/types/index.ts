@@ -25,6 +25,7 @@ export interface Service {
   duracao_minutos: number;
   preco: number;
   ativo?: boolean;
+  sob_consulta?: boolean;
   foto_url?: string | null;
 }
 

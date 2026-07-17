@@ -198,7 +198,9 @@ export default function HomePage() {
                             <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-semibold mb-0.5">
                               Preço
                             </span>
-                            <span className="font-bold text-neutral-900">€ {service.preco}</span>
+                            <span className="font-bold text-neutral-900">
+                              {service.sob_consulta ? "Sob Consulta" : `€ ${service.preco}`}
+                            </span>
                           </div>
                           <div className="flex flex-col items-end">
                             <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-semibold mb-0.5">

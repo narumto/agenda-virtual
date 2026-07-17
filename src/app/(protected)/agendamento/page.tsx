@@ -378,6 +378,7 @@ function AgendamentoContent() {
       hora: selectedTime,
       inicio: inicioStr,
       fim: fimStr,
+      ...(selectedService.sob_consulta ? { sob_consulta: "1" } : {}),
     });
 
     router.push(`/confirmacao?${params.toString()}`);
@@ -490,7 +491,7 @@ function AgendamentoContent() {
                     color: ACCENT,
                   }}
                 >
-                  € {selectedService.preco}
+                  {selectedService.sob_consulta ? "Sob Consulta" : `€ ${selectedService.preco}`}
                 </span>
               </div>
             </div>

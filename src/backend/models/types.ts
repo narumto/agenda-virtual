@@ -50,6 +50,7 @@ export interface Servico {
   duracao_minutos: number;
   preco: number;
   ativo: boolean;
+  sob_consulta: boolean;
   created_at: string;
   updated_at: string;
 }

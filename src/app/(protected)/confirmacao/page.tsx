@@ -28,6 +28,7 @@ function ConfirmacaoContent() {
   const timeDisplay = searchParams.get("hora") || "";
   const inicio = searchParams.get("inicio") || "";
   const fim = searchParams.get("fim") || "";
+  const sobConsulta = searchParams.get("sob_consulta") === "1";
 
   const [pacienteId, setPacienteId] = useState("");
   const [pacienteName, setPacienteName] = useState("");
@@ -301,7 +302,7 @@ function ConfirmacaoContent() {
     { icon: Scissors, label: "Serviço", value: serviceName },
     { icon: CalendarDays, label: "Data", value: dateDisplay },
     { icon: Clock, label: "Horário", value: timeDisplay },
-    { icon: Banknote, label: "Valor Total", value: `€ ${servicePrice}`, highlight: true },
+    { icon: Banknote, label: "Valor Total", value: sobConsulta ? "Sob Consulta" : `€ ${servicePrice}`, highlight: true },
   ];
 
   return (

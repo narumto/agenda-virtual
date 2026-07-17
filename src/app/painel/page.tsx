@@ -71,6 +71,7 @@ interface ApiServico {
   duracao_minutos: number;
   preco: number;
   ativo: boolean;
+  sob_consulta?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -399,6 +400,7 @@ export default function PainelPage() {
   const [servDuration, setServDuration] = useState("");
   const [servDescription, setServDescription] = useState("");
   const [servFotoUrl, setServFotoUrl] = useState("");
+  const [servSobConsulta, setServSobConsulta] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -653,6 +655,7 @@ export default function PainelPage() {
     setServDuration("");
     setServDescription("");
     setServFotoUrl("");
+    setServSobConsulta(false);
     setModalError(null);
     setIsModalOpen(true);
   };
@@ -665,6 +668,7 @@ export default function PainelPage() {
     setServDuration(String(service.duracao_minutos));
     setServDescription(service.descricao || "");
     setServFotoUrl(service.foto_url || "");
+    setServSobConsulta(service.sob_consulta || false);
     setModalError(null);
     setOpenMenuId(null);
     setIsModalOpen(true);
@@ -707,7 +711,7 @@ export default function PainelPage() {
 
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!servName.trim() || !servPrice || !servDuration || !servCategoriaId) {
+    if (!servName.trim() || (!servSobConsulta && !servPrice) || !servDuration || !servCategoriaId) {
       setModalError("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -717,10 +721,11 @@ export default function PainelPage() {
       const payload = {
         nome: servName.trim(),
         categoria_id: servCategoriaId,
-        preco: parseFloat(servPrice),
+        preco: servSobConsulta ? 0 : parseFloat(servPrice),
         duracao_minutos: parseInt(servDuration),
         descricao: servDescription.trim() || null,
         foto_url: servFotoUrl.trim() || null,
+        sob_consulta: servSobConsulta,
       };
 
       if (editingService) {
@@ -1742,8 +1747,8 @@ export default function PainelPage() {
                   <p className="text-sm mt-1">Crie um novo serviço no botão acima.</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto" style={{ minHeight: servicos.length > 0 && servicos.length <= 2 ? '200px' : 'auto' }}>
+                <div className="bg-white rounded-2xl border border-border shadow-sm">
+                  <div className="overflow-x-auto overflow-y-visible" style={{ minHeight: servicos.length > 0 && servicos.length <= 2 ? '200px' : 'auto' }}>
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-neutral-50 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
@@ -1805,7 +1810,11 @@ export default function PainelPage() {
 
                               {/* Price */}
                               <td className="px-6 py-4 text-sm font-semibold text-neutral-800">
-                                € {Number(service.preco).toFixed(2)}
+                                {service.sob_consulta ? (
+                                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Sob Consulta</span>
+                                ) : (
+                                  <>€ {Number(service.preco).toFixed(2)}</>
+                                )}
                               </td>
 
                               {/* Active status */}
@@ -2665,17 +2674,18 @@ export default function PainelPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                    Preço (€) *
+                    {servSobConsulta ? "Preço (€)" : "Preço (€) *"}
                   </label>
                   <input
                     type="number"
-                    required
+                    required={!servSobConsulta}
                     min="0"
                     step="0.01"
-                    placeholder="Ex: 150.00"
-                    value={servPrice}
+                    placeholder={servSobConsulta ? "Não aplicável" : "Ex: 150.00"}
+                    value={servSobConsulta ? "" : servPrice}
                     onChange={(e) => setServPrice(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                    disabled={servSobConsulta}
+                    className={`px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50 ${servSobConsulta ? "opacity-40 cursor-not-allowed" : ""}`}
                   />
                 </div>
 
@@ -2694,6 +2704,22 @@ export default function PainelPage() {
                   />
                 </div>
               </div>
+
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50/50 cursor-pointer hover:bg-neutral-50 transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={servSobConsulta}
+                  onChange={(e) => {
+                    setServSobConsulta(e.target.checked);
+                    if (e.target.checked) setServPrice("");
+                  }}
+                  className="w-4 h-4 rounded accent-[#C49A82] cursor-pointer"
+                />
+                <div>
+                  <span className="text-sm font-medium text-neutral-700">Preço sob consulta</span>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">O preço não será exibido ao cliente. Será mostrado &quot;Sob Consulta&quot;.</p>
+                </div>
+              </label>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">

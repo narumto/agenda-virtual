@@ -15,7 +15,9 @@ export class ProfissionalAuthService {
     }
 
     if (!profissional.senha_hash) {
-      throw new Error("Senha não configurada. Contacte o administrador.");
+      const err: any = new Error("Primeiro acesso detectado! O seu cadastro está liberado. Defina a sua palavra-passe para continuar.");
+      err.needsPasswordSetup = true;
+      throw err;
     }
 
     const senhaCorreta = await bcrypt.compare(senha, profissional.senha_hash);

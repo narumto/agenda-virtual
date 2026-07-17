@@ -213,13 +213,14 @@ function LoginContent() {
   // Professional Form Submit
   const handleProSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (needsPasswordSetup) {
-      handleConfigurarSenha(e);
+
+    if (!proEmail.trim()) {
+      setErrorMsg("Preencha o e-mail.");
       return;
     }
 
-    if (!proEmail.trim() || !proSenha.trim()) {
-      setErrorMsg("Preencha o email e a palavra-passe.");
+    if (needsPasswordSetup) {
+      handleConfigurarSenha(e);
       return;
     }
 
@@ -227,6 +228,33 @@ function LoginContent() {
     setErrorMsg(null);
 
     try {
+      // 1. Verificação automática de primeiro acesso
+      const checkRes = await fetch("/api/profissionais/auth/verificar-cadastro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: proEmail.trim() }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.needsPasswordSetup) {
+          setNeedsPasswordSetup(true);
+          if (!proSenha.trim() || !proConfirmarSenha.trim()) {
+            setSuccessMsg("O seu acesso foi liberado! Defina a sua palavra-passe abaixo para concluir o registo.");
+            setIsLoading(false);
+            return;
+          }
+          await handleConfigurarSenha(e);
+          return;
+        }
+      }
+
+      if (!proSenha.trim()) {
+        setErrorMsg("Preencha a palavra-passe.");
+        setIsLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/profissionais/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,6 +264,12 @@ function LoginContent() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.needsPasswordSetup) {
+          setNeedsPasswordSetup(true);
+          setSuccessMsg("O seu acesso foi liberado! Defina a sua palavra-passe abaixo para concluir o registo.");
+          setIsLoading(false);
+          return;
+        }
         throw new Error(data.message || "Erro ao fazer login");
       }
 

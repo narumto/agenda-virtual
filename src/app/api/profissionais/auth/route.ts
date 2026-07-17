@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
 
     return res;
   } catch (e: any) {
-    return NextResponse.json({ message: e.message || "Erro ao fazer login" }, { status: 401 });
+    return NextResponse.json(
+      { message: e.message || "Erro ao fazer login", needsPasswordSetup: e.needsPasswordSetup || false },
+      { status: 401 }
+    );
   }
 }
 

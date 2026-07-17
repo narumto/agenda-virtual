@@ -8,10 +8,11 @@ export class ProfissionalRepository extends BaseRepository<Profissional, string>
   }
 
   async findByEmail(email: string): Promise<Profissional | null> {
+    const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from(this.tableName)
       .select("*")
-      .eq("email", email)
+      .ilike("email", cleanEmail)
       .maybeSingle();
 
     if (error) throw error;

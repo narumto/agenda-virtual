@@ -1,6 +1,7 @@
 import { ServicoRepository } from "../repositories/ServicoRepository";
 import { CategoriaRepository } from "../repositories/CategoriaRepository";
 import { Servico } from "../models/types";
+import { supabase } from "../database/client";
 
 export class ServicoService {
   private repository = new ServicoRepository();
@@ -77,6 +78,14 @@ export class ServicoService {
   async delete(id: string): Promise<boolean> {
     const s = await this.repository.find(id);
     if (!s) throw new Error("Serviço não encontrado");
+
+    // 1. Remover vínculos profissional_servico
+    await supabase.from("profissional_servico").delete().eq("servico_id", id);
+
+    // 2. Deletar todos os agendamentos ligados a este serviço (cascade manual)
+    await supabase.from("agendamentos").delete().eq("servico_id", id);
+
+    // 3. Deletar o serviço
     return await this.repository.delete(id);
   }
 }

@@ -755,7 +755,7 @@ export default function PainelPage() {
   const handleDeleteService = (id: string) => {
     requestConfirmation(
       "Excluir Serviço",
-      "Deseja realmente excluir este serviço? Esta ação não pode ser desfeita.",
+      "Deseja realmente excluir este serviço? Todos os agendamentos associados também serão excluídos. Esta ação não pode ser desfeita.",
       async () => {
         try {
           const res = await fetch(`/api/servicos/${id}`, { method: "DELETE" });
@@ -2091,40 +2091,57 @@ export default function PainelPage() {
                         Logo da Clínica
                       </label>
                       <div className="flex items-center gap-3">
-                        {settingsForm.logo_url && (
+                        {settingsForm.logo_url ? (
                           <img
                             src={settingsForm.logo_url}
                             alt="Preview Logo"
                             className="w-10 h-10 rounded-full object-cover shadow-sm border border-neutral-200 shrink-0"
                           />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center shrink-0">
+                            <Camera size={16} className="text-neutral-400" />
+                          </div>
                         )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            
-                            const formData = new FormData();
-                            formData.append("file", file);
+                        <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-700 font-medium cursor-pointer hover:bg-neutral-100 transition-colors">
+                          <Upload size={14} />
+                          {settingsLoading ? "A carregar..." : "Escolher imagem"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
 
-                            try {
-                              setSettingsLoading(true);
-                              const res = await fetch("/api/upload", {
-                                method: "POST",
-                                body: formData,
-                              });
-                              if (!res.ok) throw new Error("Erro ao fazer upload");
-                              const uploadData = await res.json();
-                              setSettingsForm((prev) => ({ ...prev, logo_url: uploadData.url }));
-                            } catch (err: any) {
-                              setSettingsError("Falha no upload da logo: " + err.message);
-                            } finally {
-                              setSettingsLoading(false);
-                            }
-                          }}
-                          className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 file:text-neutral-700 hover:file:bg-neutral-200 cursor-pointer"
-                        />
+                              const formData = new FormData();
+                              formData.append("file", file);
+
+                              try {
+                                setSettingsLoading(true);
+                                const res = await fetch("/api/upload", {
+                                  method: "POST",
+                                  body: formData,
+                                });
+                                if (!res.ok) throw new Error("Erro ao fazer upload");
+                                const uploadData = await res.json();
+                                setSettingsForm((prev) => ({ ...prev, logo_url: uploadData.url }));
+                              } catch (err: any) {
+                                setSettingsError("Falha no upload da logo: " + err.message);
+                              } finally {
+                                setSettingsLoading(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        {settingsForm.logo_url && (
+                          <button
+                            type="button"
+                            onClick={() => setSettingsForm((prev) => ({ ...prev, logo_url: "" }))}
+                            className="text-xs text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

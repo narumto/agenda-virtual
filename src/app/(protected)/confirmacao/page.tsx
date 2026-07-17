@@ -1,47 +1,35 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft,
-  Sparkles,
-  ChevronRight,
   Scissors,
   CalendarDays,
   Clock,
   Banknote,
   CheckCircle2,
   AlertCircle,
-  User,
-  LogOut,
 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
-import { siteConfig } from "@/config/site";
-import { WHATSAPP_LINK, WHATSAPP_NUMERO } from "@/config/constants";
+import { AppHeader } from "@/components/AppHeader";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import { ACCENT, ACCENT_LIGHT, WHATSAPP_LINK, WHATSAPP_NUMERO } from "@/config/constants";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-const ACCENT = "#C49A82";
-const ACCENT_LIGHT = "#F5EDE6";
-
-export default function ConfirmacaoPage() {
+function ConfirmacaoContent() {
   const router = useRouter();
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const { userProfile, signOut } = useAuth();
 
-  const [serviceName, setServiceName] = useState("");
-  const [servicePrice, setServicePrice] = useState("");
-  const [dateDisplay, setDateDisplay] = useState("");
-  const [timeDisplay, setTimeDisplay] = useState("");
-  const [serviceId, setServiceId] = useState("");
-  const [inicio, setInicio] = useState("");
-  const [fim, setFim] = useState("");
+  const serviceId = searchParams.get("servico_id") || "";
+  const serviceName = searchParams.get("servico_nome") || "";
+  const servicePrice = searchParams.get("servico_preco") || "";
+  const dateDisplay = searchParams.get("data") || "";
+  const timeDisplay = searchParams.get("hora") || "";
+  const inicio = searchParams.get("inicio") || "";
+  const fim = searchParams.get("fim") || "";
 
   const [pacienteId, setPacienteId] = useState("");
   const [pacienteName, setPacienteName] = useState("");
-  const [userProfile, setUserProfile] = useState<any | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [config, setConfig] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
@@ -54,26 +42,10 @@ export default function ConfirmacaoPage() {
   const [saveAsDefaultPhone, setSaveAsDefaultPhone] = useState(true);
 
   useEffect(() => {
-    const sId = localStorage.getItem("selected_service_id") || "";
-    const sName = localStorage.getItem("selected_service_name") || "";
-    const sPrice = localStorage.getItem("selected_service_price") || "";
-    const dDisplay = localStorage.getItem("selected_date_display") || "";
-    const tDisplay = localStorage.getItem("selected_time_display") || "";
-    const sInicio = localStorage.getItem("selected_inicio") || "";
-    const sFim = localStorage.getItem("selected_fim") || "";
-
-    if (!sId || !dDisplay || !tDisplay || !sInicio) {
+    if (!serviceId || !dateDisplay || !timeDisplay || !inicio) {
       router.push("/agendamento");
       return;
     }
-
-    setServiceId(sId);
-    setServiceName(sName);
-    setServicePrice(sPrice);
-    setDateDisplay(dDisplay);
-    setTimeDisplay(tDisplay);
-    setInicio(sInicio);
-    setFim(sFim);
 
     const fetchUserProfile = async () => {
       try {
@@ -89,18 +61,12 @@ export default function ConfirmacaoPage() {
           googleId = session.user.id;
           userName = session.user.user_metadata?.full_name || "Usuário";
           userFoto = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "";
-          setUserProfile({ nome: userName, foto_url: userFoto, role: "paciente" });
         } else {
           const res = await fetch("/api/profissionais/auth?t=" + Date.now(), { cache: "no-store" });
           if (res.ok) {
             const data = await res.json();
             if (data.authenticated) {
               isPro = true;
-              setUserProfile({
-                nome: data.data.nome,
-                foto_url: data.data.foto_url || "",
-                role: "profissional",
-              });
               setPacienteName(data.data.nome);
               setPacienteId("pro-preview-id");
             } else {
@@ -140,33 +106,16 @@ export default function ConfirmacaoPage() {
           setConfig(configData);
         }
       } catch (err: any) {
-        setErrorMsg(err.message || "Não foi possível recuperar seus dados.");
+        setErrorMsg(
+          err.message || "Não foi possível recuperar seus dados.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserProfile();
-  }, [router]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setDropdownOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleSignOut = async () => {
-    if (userProfile?.role === "profissional") {
-      await fetch("/api/profissionais/auth", { method: "DELETE" });
-      window.location.href = "/profissional/login";
-    } else {
-      await supabase.auth.signOut();
-      router.push("/login");
-    }
-  };
+  }, [router, serviceId, dateDisplay, timeDisplay, inicio]);
 
   const handleConfirm = async () => {
     if (userProfile?.role === "profissional") {
@@ -208,18 +157,24 @@ export default function ConfirmacaoPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Falha ao registrar agendamento");
+      if (!res.ok)
+        throw new Error(
+          data.message || "Falha ao registrar agendamento",
+        );
 
       setSuccess(true);
-      ["selected_service_id", "selected_service_name", "selected_service_price",
-        "selected_date_display", "selected_time_display", "selected_inicio", "selected_fim"]
-        .forEach((k) => localStorage.removeItem(k));
     } catch (err: any) {
       setErrorMsg(err.message || "Erro interno de agendamento.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const BREADCRUMBS = [
+    { label: "Serviços", done: true },
+    { label: "Data & Hora", done: true },
+    { label: "Confirmação", active: true },
+  ];
 
   if (loading) {
     return (
@@ -229,125 +184,19 @@ export default function ConfirmacaoPage() {
     );
   }
 
-  const Header = () => (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-neutral-100 px-6 py-4 md:px-10">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-
-        <div className="flex items-center gap-4">
-          <button
-            id="btn-back"
-            onClick={() => router.push("/agendamento")}
-            className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-800 transition-colors group cursor-pointer"
-          >
-            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span className="hidden sm:inline">Voltar</span>
-          </button>
-
-          <div className="w-px h-5 bg-neutral-200" />
-
-          <div className="flex items-center gap-2.5">
-            <img
-              src={config?.logo_url || "/logo.png"}
-              alt="Logo"
-              className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-neutral-200 shrink-0"
-            />
-            <span
-              className="text-[15px] text-neutral-900 hidden sm:block"
-              style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}
-            >
-              {config?.nome_site || siteConfig.name}
-            </span>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-2 text-xs text-neutral-400">
-          <span className="line-through opacity-40">Serviços</span>
-          <ChevronRight size={11} className="opacity-40" />
-          <span className="line-through opacity-40">Data &amp; Hora</span>
-          <ChevronRight size={11} className="opacity-40" />
-          <span className="font-semibold" style={{ color: ACCENT }}>Confirmação</span>
-        </div>
-
-        <div className="relative shrink-0" ref={dropdownRef}>
-          <button
-            id="btn-avatar-menu"
-            onClick={() => setDropdownOpen((p) => !p)}
-            className="flex items-center rounded-full cursor-pointer focus:outline-none group relative"
-            aria-label="Menu do usuário"
-          >
-            {userProfile?.foto_url ? (
-              <img
-                src={userProfile.foto_url}
-                alt="Avatar"
-                className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-[#C49A82]/20 group-hover:ring-[#C49A82]/50 transition-all"
-              />
-            ) : (
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-sm ring-2 ring-[#C49A82]/20 group-hover:ring-[#C49A82]/50 transition-all"
-                style={{ background: ACCENT }}
-              >
-                {userProfile?.nome ? userProfile.nome.charAt(0).toUpperCase() : "U"}
-              </div>
-            )}
-            <span
-              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white transition-colors ${dropdownOpen ? "bg-[#C49A82]" : "bg-emerald-400"}`}
-            />
-          </button>
-
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-3 w-52 bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden z-50" style={{ animation: "fadeIn .15s ease" }}>
-              <div className="px-4 py-3 border-b border-neutral-50">
-                <p className="text-xs text-neutral-400 mb-0.5">Logado como</p>
-                <p className="text-sm font-semibold text-neutral-800 truncate">{userProfile?.nome || "Usuário"}</p>
-              </div>
-              <div className="py-1.5">
-                {userProfile?.role === "profissional" && (
-                  <button
-                    id="dropdown-voltar-painel"
-                    onClick={() => { setDropdownOpen(false); router.push("/painel"); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 transition-colors cursor-pointer text-amber-800"
-                  >
-                    <Sparkles size={15} className="text-amber-600" />
-                    Painel Administrativo
-                  </button>
-                )}
-                <button
-                  id="dropdown-minha-conta"
-                  onClick={() => { setDropdownOpen(false); router.push("/minha-conta"); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <User size={15} className="text-neutral-400" />
-                  Minha Conta
-                </button>
-                <button
-                  id="dropdown-meus-agendamentos"
-                  onClick={() => { setDropdownOpen(false); router.push("/meus-agendamentos"); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 transition-colors cursor-pointer"
-                  style={{ color: ACCENT }}
-                >
-                  <CalendarDays size={15} style={{ color: ACCENT }} />
-                  Meus Agendamentos
-                </button>
-                <button
-                  id="dropdown-sair"
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
-                >
-                  <LogOut size={15} className="text-rose-400" />
-                  Sair
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-
   if (success) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex flex-col" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-        <Header />
+      <div
+        className="min-h-screen bg-[#FAF9F6] flex flex-col"
+        style={{ fontFamily: "'DM Sans', sans-serif" }}
+      >
+        <AppHeader
+          userProfile={userProfile}
+          onSignOut={signOut}
+          backHref="/agendamento"
+          backLabel="Voltar"
+          breadcrumbs={BREADCRUMBS}
+        />
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-md"
@@ -357,12 +206,19 @@ export default function ConfirmacaoPage() {
           </div>
           <h1
             className="text-3xl text-[#2B2723] mb-3"
-            style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 400,
+            }}
           >
             Agendamento Solicitado!
           </h1>
           <p className="text-sm text-neutral-500 max-w-sm leading-relaxed">
-            Seu horário foi reservado com sucesso e está <span className="font-medium text-neutral-700">pendente de confirmação</span>. Obrigado, {pacienteName.split(" ")[0]}!
+            Seu horário foi reservado com sucesso e está{" "}
+            <span className="font-medium text-neutral-700">
+              pendente de confirmação
+            </span>
+            . Obrigado, {pacienteName.split(" ")[0]}!
           </p>
 
           <div
@@ -371,7 +227,9 @@ export default function ConfirmacaoPage() {
           >
             <div className="flex items-center gap-3">
               <Scissors size={14} style={{ color: ACCENT }} />
-              <span className="font-semibold text-neutral-800">{serviceName}</span>
+              <span className="font-semibold text-neutral-800">
+                {serviceName}
+              </span>
             </div>
             <div className="flex items-center gap-3 text-neutral-500">
               <CalendarDays size={14} style={{ color: ACCENT }} />
@@ -389,12 +247,15 @@ export default function ConfirmacaoPage() {
               Pagamento presencial
             </p>
             <p className="text-sm text-amber-800 leading-relaxed">
-              O pagamento é realizado <strong>diretamente no local</strong> no momento do atendimento. Não é necessário nenhum pagamento antecipado.
+              O pagamento é realizado <strong>diretamente no local</strong> no momento do
+              atendimento. Não é necessário nenhum pagamento antecipado.
             </p>
           </div>
 
           <div className="mt-4 max-w-sm w-full rounded-2xl border border-neutral-100 bg-white shadow-sm px-6 py-4 text-left space-y-1">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Dúvidas?</p>
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+              Dúvidas?
+            </p>
             <p className="text-sm text-neutral-600 leading-relaxed">
               Fale diretamente com a nossa equipa pelo WhatsApp:
             </p>
@@ -433,23 +294,37 @@ export default function ConfirmacaoPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <Header />
+    <div
+      className="min-h-screen bg-[#FAF9F6]"
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
+    >
+      <AppHeader
+        userProfile={userProfile}
+        onSignOut={signOut}
+        backHref="/agendamento"
+        backLabel="Voltar"
+        breadcrumbs={BREADCRUMBS}
+      />
 
       <div className="text-center pt-10 pb-2">
-        <p className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2" style={{ color: ACCENT }}>
+        <p
+          className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2"
+          style={{ color: ACCENT }}
+        >
           Etapa 3 de 3
         </p>
         <h1
           className="text-3xl text-[#2B2723]"
-          style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 400,
+          }}
         >
           Confirme o seu Agendamento
         </h1>
       </div>
 
       <main className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 items-start">
-
         <div className="rounded-3xl border border-neutral-200/60 bg-white shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-neutral-100" style={{ background: ACCENT_LIGHT }}>
             <p className="text-[10px] uppercase tracking-[0.15em] text-neutral-400 mb-0.5 font-semibold">
@@ -457,7 +332,10 @@ export default function ConfirmacaoPage() {
             </p>
             <p
               className="text-lg text-[#2B2723]"
-              style={{ fontFamily: "'Playfair Display', serif", fontWeight: 500 }}
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 500,
+              }}
             >
               {serviceName}
             </p>
@@ -473,12 +351,19 @@ export default function ConfirmacaoPage() {
                   <Icon size={14} style={{ color: ACCENT }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-neutral-400 mb-0.5 uppercase tracking-wide font-semibold">{label}</p>
+                  <p className="text-[10px] text-neutral-400 mb-0.5 uppercase tracking-wide font-semibold">
+                    {label}
+                  </p>
                   <p
                     className="text-sm font-medium truncate"
-                    style={highlight
-                      ? { color: ACCENT, fontFamily: "'Playfair Display', serif", fontSize: "1.05rem" }
-                      : { color: "#2B2723" }
+                    style={
+                      highlight
+                        ? {
+                            color: ACCENT,
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "1.05rem",
+                          }
+                        : { color: "#2B2723" }
                     }
                   >
                     {value}
@@ -491,7 +376,10 @@ export default function ConfirmacaoPage() {
           <div className="px-6 py-4 border-t border-neutral-100">
             <p className="text-[11px] text-neutral-400 leading-relaxed">
               Ao confirmar, você concorda com a nossa{" "}
-              <button className="underline underline-offset-2 hover:opacity-70 transition-opacity" style={{ color: ACCENT }}>
+              <button
+                className="underline underline-offset-2 hover:opacity-70 transition-opacity"
+                style={{ color: ACCENT }}
+              >
                 política de cancelamento
               </button>
               . Cancelamentos com menos de 24h podem ter custo.
@@ -500,24 +388,37 @@ export default function ConfirmacaoPage() {
         </div>
 
         <div className="rounded-3xl border border-neutral-200/60 bg-white shadow-sm p-7 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: ACCENT }} />
+          <div
+            className="absolute top-0 left-0 right-0 h-[3px]"
+            style={{ background: ACCENT }}
+          />
 
           <p className="text-[10px] uppercase tracking-[0.15em] text-neutral-400 mb-1 font-semibold">
             Seus Dados
           </p>
           <h2
             className="text-xl text-[#2B2723] mb-1"
-            style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 400,
+            }}
           >
             Tudo certo para confirmar!
           </h2>
           <p className="text-sm text-neutral-500 mb-6">
-            Você está agendando como <span className="font-semibold text-neutral-700">{pacienteName}</span>. Se quiser, adicione uma observação.
+            Você está agendando como{" "}
+            <span className="font-semibold text-neutral-700">
+              {pacienteName}
+            </span>
+            . Se quiser, adicione uma observação.
           </p>
 
           {errorMsg && (
             <div className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl flex items-start gap-3 text-sm font-medium">
-              <AlertCircle size={18} className="shrink-0 text-rose-500 mt-0.5" />
+              <AlertCircle
+                size={18}
+                className="shrink-0 text-rose-500 mt-0.5"
+              />
               <div>{errorMsg}</div>
             </div>
           )}
@@ -551,18 +452,22 @@ export default function ConfirmacaoPage() {
           )}
 
           <div className="flex flex-col gap-1.5 mb-6">
-            <label className="text-xs font-medium text-neutral-700" style={{ letterSpacing: "0.02em" }}>
-              Observações <span className="text-neutral-400 font-normal">(Opcional)</span>
+            <label
+              className="text-xs font-medium text-neutral-700"
+              style={{ letterSpacing: "0.02em" }}
+            >
+              Observações{" "}
+              <span className="text-neutral-400 font-normal">
+                (Opcional)
+              </span>
             </label>
             <textarea
               placeholder="Alguma informação adicional? Ex: preferência de horário, alergia a produtos..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
-              className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-700 placeholder:text-neutral-400 resize-none transition-colors focus:outline-none focus:bg-white"
+              className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-700 placeholder:text-neutral-400 resize-none transition-colors focus:outline-none focus:bg-white focus:border-[#C49A82]"
               style={{ lineHeight: "1.6" }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = ACCENT)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "")}
             />
           </div>
 
@@ -585,5 +490,19 @@ export default function ConfirmacaoPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ConfirmacaoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+          <div className="w-8 h-8 border-4 border-[#C49A82] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <ConfirmacaoContent />
+    </Suspense>
   );
 }

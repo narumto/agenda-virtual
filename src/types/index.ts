@@ -1,8 +1,12 @@
 // ── User ──
 
 export interface UserProfile {
+  id?: string;
   nome: string;
   foto_url: string;
+  email?: string;
+  telefone?: string;
+  categoria?: string;
   role?: "paciente" | "profissional";
 }
 

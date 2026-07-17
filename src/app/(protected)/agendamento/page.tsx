@@ -55,12 +55,29 @@ function getLocalDateTimeString(
   day: number,
   time: string,
 ) {
-  const [hours, minutes] = time.split(":");
-  const date = new Date(year, month, day, parseInt(hours), parseInt(minutes));
+  const [hours, minutes] = time.split(":").map(Number);
+  
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    timeZoneName: "longOffset"
+  });
+  const date = new Date(Date.UTC(year, month, day, hours, minutes));
+  const parts = formatter.formatToParts(date);
+  const tzNamePart = parts.find(p => p.type === "timeZoneName");
+  
+  let offset = "+00:00";
+  if (tzNamePart && tzNamePart.value !== "GMT") {
+    const match = tzNamePart.value.match(/GMT([+-])(\d+)(?::(\d+))?/);
+    if (match) {
+      const sign = match[1];
+      const h = match[2].padStart(2, "0");
+      const m = (match[3] || "00").padStart(2, "0");
+      offset = `${sign}${h}:${m}`;
+    }
+  }
+  
   const pad = (num: number) => String(num).padStart(2, "0");
-  const tzo = -date.getTimezoneOffset();
-  const dif = tzo >= 0 ? "+" : "-";
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00${dif}${pad(Math.floor(Math.abs(tzo) / 60))}:${pad(Math.abs(tzo) % 60)}`;
+  return `${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00${offset}`;
 }
 
 // Inner component that uses useSearchParams (needs Suspense boundary)
@@ -279,9 +296,28 @@ function AgendamentoContent() {
       selectedTime,
     );
     const inicio = new Date(inicioStr);
-    const fimStr = new Date(
-      inicio.getTime() + selectedService.duracao_minutos * 60 * 1000,
-    ).toISOString();
+    const endOffsetTime = new Date(inicio.getTime() + selectedService.duracao_minutos * 60 * 1000);
+    const endFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Lisbon",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false
+    });
+    const endParts = endFormatter.formatToParts(endOffsetTime);
+    const p: Record<string, string> = {};
+    endParts.forEach(part => { p[part.type] = part.value; });
+    const endHours = p.hour === "24" ? "00" : p.hour.padStart(2, "0");
+    const endMinutes = p.minute.padStart(2, "0");
+    
+    const fimStr = getLocalDateTimeString(
+      parseInt(p.year),
+      parseInt(p.month) - 1,
+      parseInt(p.day),
+      `${endHours}:${endMinutes}`
+    );
 
     const params = new URLSearchParams({
       servico_id: selectedService.id,

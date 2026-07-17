@@ -93,7 +93,7 @@ export function useAuth(): UseAuthReturn {
   const signOut = useCallback(async () => {
     if (userProfile?.role === "profissional") {
       await fetch("/api/profissionais/auth", { method: "DELETE" });
-      window.location.href = "/profissional/login";
+      window.location.href = "/login?role=profissional";
     } else {
       await supabase.auth.signOut();
       localStorage.removeItem("google_login_role");

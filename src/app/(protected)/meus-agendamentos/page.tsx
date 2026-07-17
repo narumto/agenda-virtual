@@ -59,6 +59,7 @@ function formatDate(iso: string) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Europe/Lisbon"
   });
 }
 
@@ -66,6 +67,7 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Lisbon"
   });
 }
 

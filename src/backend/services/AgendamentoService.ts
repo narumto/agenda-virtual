@@ -45,8 +45,17 @@ export class AgendamentoService {
         const emailService = new EmailService();
 
         const start = new Date(agendamento.inicio);
-        const formattedDate = start.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
-        const formattedTime = start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        const formattedDate = start.toLocaleDateString("pt-BR", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "Europe/Lisbon"
+        });
+        const formattedTime = start.toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Europe/Lisbon"
+        });
 
         await emailService.sendConfirmationEmail(
           paciente.email,
@@ -114,51 +123,17 @@ export class AgendamentoService {
 
     const config = await this.configService.getConfig();
 
-    const timeZone = "Europe/Lisbon";
-    const getClinicTimeStr = (date: Date) => {
-      const formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      });
-      const parts = formatter.formatToParts(date);
-      const hour = parts.find(p => p.type === "hour")?.value || "00";
-      const minute = parts.find(p => p.type === "minute")?.value || "00";
-      const second = parts.find(p => p.type === "second")?.value || "00";
-      return `${hour}:${minute}:${second}`;
-    };
+    const startParts = getLisbonDateParts(start);
+    const endParts = getLisbonDateParts(end);
 
-    const getClinicDayOfWeek = (date: Date) => {
-      const formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone,
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        hour12: false,
-      });
-      const parts = formatter.formatToParts(date);
-      const getPart = (type: string) => Number(parts.find(p => p.type === type)?.value);
-      const localDate = new Date(Date.UTC(
-        getPart("year"),
-        getPart("month") - 1,
-        getPart("day"),
-        getPart("hour"),
-        getPart("minute")
-      ));
-      return localDate.getUTCDay();
-    };
-
-    const dayOfWeek = getClinicDayOfWeek(start);
+    const dayOfWeek = startParts.dayOfWeek;
     if (!config.dias_funcionamento.includes(dayOfWeek)) {
       throw new Error("O estabelecimento não funciona no dia selecionado");
     }
 
-    const startStr = getClinicTimeStr(start);
-    const endStr = getClinicTimeStr(end);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const startStr = `${pad(startParts.hour)}:${pad(startParts.minute)}:${pad(startParts.second)}`;
+    const endStr = `${pad(endParts.hour)}:${pad(endParts.minute)}:${pad(endParts.second)}`;
 
     if (startStr < config.hora_abertura || endStr > config.hora_fechamento) {
       throw new Error(
@@ -172,4 +147,40 @@ export class AgendamentoService {
       );
     }
   }
+}
+
+function getLisbonDateParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+    weekday: "short",
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const p: Record<string, string> = {};
+  parts.forEach(part => { p[part.type] = part.value; });
+  
+  const weekdayMap: Record<string, number> = {
+    "Sun": 0, "Sunday": 0, "Mon": 1, "Monday": 1, "Tue": 2, "Tuesday": 2,
+    "Wed": 3, "Wednesday": 3, "Thu": 4, "Thursday": 4, "Fri": 5, "Friday": 5,
+    "Sat": 6, "Saturday": 6
+  };
+  const weekdayStr = parts.find(part => part.type === "weekday")?.value || "";
+  const dayOfWeek = weekdayMap[weekdayStr] !== undefined ? weekdayMap[weekdayStr] : date.getDay();
+  
+  return {
+    year: parseInt(p.year),
+    month: parseInt(p.month),
+    day: parseInt(p.day),
+    hour: parseInt(p.hour === "24" ? "0" : p.hour),
+    minute: parseInt(p.minute),
+    second: parseInt(p.second),
+    dayOfWeek
+  };
 }

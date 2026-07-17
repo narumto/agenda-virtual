@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UserAvatarDropdown } from "./UserAvatarDropdown";
 import { siteConfig, ACCENT } from "@/config/constants";
@@ -56,12 +56,11 @@ export function AppHeader({
           )}
 
           <div className="flex items-center gap-3 shrink-0">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: ACCENT }}
-            >
-              <Sparkles size={18} className="text-white" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-10 h-10 rounded-full object-cover shadow-sm border border-neutral-100 shrink-0"
+            />
             <div>
               <h1
                 className="text-lg leading-tight text-neutral-900"

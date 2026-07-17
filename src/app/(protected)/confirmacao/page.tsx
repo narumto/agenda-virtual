@@ -9,6 +9,7 @@ import {
   Banknote,
   CheckCircle2,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
@@ -221,6 +222,16 @@ function ConfirmacaoContent() {
             . Obrigado, {pacienteName.split(" ")[0]}!
           </p>
 
+          <div className="mt-5 max-w-sm w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-left space-y-1">
+            <p className="text-xs font-bold text-blue-800 uppercase tracking-wide flex items-center gap-1.5">
+              <Mail size={13} />
+              Confirmar Agendamento
+            </p>
+            <p className="text-sm text-blue-900 leading-relaxed">
+              Enviamos um e-mail de confirmação. Por favor, <strong>consulte a sua caixa de entrada e a pasta de Spam</strong> para confirmar o seu horário.
+            </p>
+          </div>
+
           <div
             className="mt-8 rounded-2xl border border-neutral-100 bg-white shadow-sm px-8 py-5 text-sm space-y-2 text-left"
             style={{ minWidth: 280 }}
@@ -373,18 +384,6 @@ function ConfirmacaoContent() {
             ))}
           </div>
 
-          <div className="px-6 py-4 border-t border-neutral-100">
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
-              Ao confirmar, você concorda com a nossa{" "}
-              <button
-                className="underline underline-offset-2 hover:opacity-70 transition-opacity"
-                style={{ color: ACCENT }}
-              >
-                política de cancelamento
-              </button>
-              . Cancelamentos com menos de 24h podem ter custo.
-            </p>
-          </div>
         </div>
 
         <div className="rounded-3xl border border-neutral-200/60 bg-white shadow-sm p-7 relative overflow-hidden">

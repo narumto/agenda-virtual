@@ -590,21 +590,6 @@ function LoginContent() {
             </div>
           )}
 
-          {/* Bottom links */}
-          <div className="text-center md:text-left pt-6 border-t border-neutral-100">
-            <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mx-auto md:mx-0">
-              Sua privacidade é muito importante para nós. Ao continuar, você
-              declara concordar com nossos{" "}
-              <a href="#" className="text-[#C49A82] hover:underline">
-                Termos de Serviço
-              </a>{" "}
-              e{" "}
-              <a href="#" className="text-[#C49A82] hover:underline">
-                Políticas de Privacidade
-              </a>
-              .
-            </p>
-          </div>
         </div>
       </div>
     </div>

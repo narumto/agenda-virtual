@@ -293,6 +293,13 @@ function getWhatsAppLink(phone: string): string {
   return `https://wa.me/${cleaned}`;
 }
 
+/** Extrai apenas os dígitos locais (sem DDI) do número armazenado. */
+function getLocalPhoneDigits(phone: string, ddi: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith(ddi)) return digits.slice(ddi.length);
+  return digits;
+}
+
 function stringToColor(str: string): string {
   const palette = ["#C49A82", "#B08898", "#8FA8C0", "#8DA88A", "#A89870", "#A07888"];
   let hash = 0;
@@ -407,6 +414,7 @@ export default function PainelPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsPhoneCountry, setSettingsPhoneCountry] = useState<"BR" | "PT">("PT");
 
   const fetchAgendamentos = useCallback(async () => {
     setLoadingAgendamentos(true);
@@ -478,6 +486,9 @@ export default function PainelPage() {
         logo_url: data.logo_url || "",
         nome_site: data.nome_site || "",
       });
+      // Auto-detectar país pelo DDI
+      const digits = (data.telefone || "").replace(/\D/g, "");
+      setSettingsPhoneCountry(digits.startsWith("55") ? "BR" : "PT");
     } catch (e: any) {
       setError(e.message);
     }
@@ -992,6 +1003,24 @@ export default function PainelPage() {
       return;
     }
 
+    // Validar e normalizar número de telefone
+    const ddi = settingsPhoneCountry === "BR" ? "55" : "351";
+    const localDigits = getLocalPhoneDigits(settingsForm.telefone, ddi);
+    let normalizedPhone = "";
+    if (localDigits) {
+      if (settingsPhoneCountry === "PT" && !/^[92]\d{8}$/.test(localDigits)) {
+        setSettingsError("Número português inválido. Use 9 dígitos começando com 9 ou 2 (ex: 912345678).");
+        setSettingsLoading(false);
+        return;
+      }
+      if (settingsPhoneCountry === "BR" && !/^\d{10,11}$/.test(localDigits)) {
+        setSettingsError("Número brasileiro inválido. Use DDD + número com 10 ou 11 dígitos (ex: 11999999999).");
+        setSettingsLoading(false);
+        return;
+      }
+      normalizedPhone = `+${ddi}${localDigits}`;
+    }
+
     try {
       const payload = {
         hora_abertura: settingsForm.hora_abertura + ":00",
@@ -999,7 +1028,7 @@ export default function PainelPage() {
         almoco_inicio: settingsForm.almoco_inicio + ":00",
         almoco_fim: settingsForm.almoco_fim + ":00",
         dias_funcionamento: settingsForm.dias_funcionamento,
-        telefone: settingsForm.telefone,
+        telefone: normalizedPhone,
         logo_url: settingsForm.logo_url,
         nome_site: settingsForm.nome_site,
       };
@@ -2023,15 +2052,39 @@ export default function PainelPage() {
                       <label className="text-xs font-semibold text-neutral-800 uppercase tracking-wide">
                         Telemóvel / Telefone (WhatsApp)
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: +351 912 345 678"
-                        value={settingsForm.telefone}
-                        onChange={(e) =>
-                          setSettingsForm((prev) => ({ ...prev, telefone: e.target.value }))
-                        }
-                        className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
-                      />
+                      <div className="flex gap-2">
+                        <select
+                          value={settingsPhoneCountry}
+                          onChange={(e) => {
+                            const country = e.target.value as "BR" | "PT";
+                            const oldDdi = settingsPhoneCountry === "BR" ? "55" : "351";
+                            const local = getLocalPhoneDigits(settingsForm.telefone, oldDdi);
+                            const newDdi = country === "BR" ? "55" : "351";
+                            setSettingsPhoneCountry(country);
+                            setSettingsForm((prev) => ({ ...prev, telefone: local ? `+${newDdi}${local}` : "" }));
+                          }}
+                          className="px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50 shrink-0 cursor-pointer"
+                        >
+                          <option value="PT">🇵🇹 +351</option>
+                          <option value="BR">🇧🇷 +55</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder={settingsPhoneCountry === "PT" ? "912 345 678" : "11 99999-9999"}
+                          value={getLocalPhoneDigits(settingsForm.telefone, settingsPhoneCountry === "BR" ? "55" : "351")}
+                          onChange={(e) => {
+                            const local = e.target.value.replace(/\D/g, "");
+                            const d = settingsPhoneCountry === "BR" ? "55" : "351";
+                            setSettingsForm((prev) => ({ ...prev, telefone: local ? `+${d}${local}` : "" }));
+                          }}
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
+                        />
+                      </div>
+                      <p className="text-xs text-neutral-400">
+                        {settingsPhoneCountry === "PT"
+                          ? "Ex: 912 345 678 (9 dígitos)"
+                          : "Ex: 11 99999-9999 (DDD + número)"}
+                      </p>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-neutral-800 uppercase tracking-wide">

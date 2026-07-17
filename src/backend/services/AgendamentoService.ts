@@ -114,14 +114,51 @@ export class AgendamentoService {
 
     const config = await this.configService.getConfig();
 
-    const dayOfWeek = start.getDay();
+    const timeZone = "Europe/Lisbon";
+    const getClinicTimeStr = (date: Date) => {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const parts = formatter.formatToParts(date);
+      const hour = parts.find(p => p.type === "hour")?.value || "00";
+      const minute = parts.find(p => p.type === "minute")?.value || "00";
+      const second = parts.find(p => p.type === "second")?.value || "00";
+      return `${hour}:${minute}:${second}`;
+    };
+
+    const getClinicDayOfWeek = (date: Date) => {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        hour12: false,
+      });
+      const parts = formatter.formatToParts(date);
+      const getPart = (type: string) => Number(parts.find(p => p.type === type)?.value);
+      const localDate = new Date(Date.UTC(
+        getPart("year"),
+        getPart("month") - 1,
+        getPart("day"),
+        getPart("hour"),
+        getPart("minute")
+      ));
+      return localDate.getUTCDay();
+    };
+
+    const dayOfWeek = getClinicDayOfWeek(start);
     if (!config.dias_funcionamento.includes(dayOfWeek)) {
       throw new Error("O estabelecimento não funciona no dia selecionado");
     }
 
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const startStr = `${pad(start.getHours())}:${pad(start.getMinutes())}:${pad(start.getSeconds())}`;
-    const endStr = `${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
+    const startStr = getClinicTimeStr(start);
+    const endStr = getClinicTimeStr(end);
 
     if (startStr < config.hora_abertura || endStr > config.hora_fechamento) {
       throw new Error(

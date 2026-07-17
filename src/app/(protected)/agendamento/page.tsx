@@ -56,11 +56,39 @@ function getLocalDateTimeString(
   time: string,
 ) {
   const [hours, minutes] = time.split(":");
-  const date = new Date(year, month, day, parseInt(hours), parseInt(minutes));
+  const utcDate = new Date(Date.UTC(year, month, day, parseInt(hours), parseInt(minutes)));
+  
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(utcDate);
+  const getPart = (type: string) => Number(parts.find(p => p.type === type)?.value);
+
+  const formattedLisbon = new Date(Date.UTC(
+    getPart("year"),
+    getPart("month") - 1,
+    getPart("day"),
+    getPart("hour"),
+    getPart("minute")
+  ));
+
+  const offsetMs = formattedLisbon.getTime() - utcDate.getTime();
+  const offsetMinutes = offsetMs / 60000;
+  
   const pad = (num: number) => String(num).padStart(2, "0");
-  const tzo = -date.getTimezoneOffset();
-  const dif = tzo >= 0 ? "+" : "-";
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00${dif}${pad(Math.floor(Math.abs(tzo) / 60))}:${pad(Math.abs(tzo) % 60)}`;
+  const absOffset = Math.abs(offsetMinutes);
+  const dif = offsetMinutes >= 0 ? "+" : "-";
+  const offsetStr = `${dif}${pad(Math.floor(absOffset / 60))}:${pad(absOffset % 60)}`;
+  
+  return `${year}-${pad(month + 1)}-${pad(day)}T${pad(parseInt(hours))}:${pad(parseInt(minutes))}:00${offsetStr}`;
 }
 
 // Inner component that uses useSearchParams (needs Suspense boundary)

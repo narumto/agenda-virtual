@@ -185,9 +185,77 @@ function buildMiniCalendar(year: number, month: number): (number | null)[] {
   return cells;
 }
 
+function getLisbonDateParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+    weekday: "short",
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const p: Record<string, string> = {};
+  parts.forEach(part => { p[part.type] = part.value; });
+  
+  const weekdayMap: Record<string, number> = {
+    "Sun": 0, "Sunday": 0, "Mon": 1, "Monday": 1, "Tue": 2, "Tuesday": 2,
+    "Wed": 3, "Wednesday": 3, "Thu": 4, "Thursday": 4, "Fri": 5, "Friday": 5,
+    "Sat": 6, "Saturday": 6
+  };
+  const weekdayStr = parts.find(part => part.type === "weekday")?.value || "";
+  const dayOfWeek = weekdayMap[weekdayStr] !== undefined ? weekdayMap[weekdayStr] : date.getDay();
+  
+  return {
+    year: parseInt(p.year),
+    month: parseInt(p.month),
+    day: parseInt(p.day),
+    hour: parseInt(p.hour === "24" ? "0" : p.hour),
+    minute: parseInt(p.minute),
+    second: parseInt(p.second),
+    dayOfWeek
+  };
+}
+
+function getLisbonDate(year: number, month: number, day: number, hours = 0, minutes = 0, seconds = 0) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    timeZoneName: "longOffset"
+  });
+  const date = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+  const parts = formatter.formatToParts(date);
+  const tzNamePart = parts.find(p => p.type === "timeZoneName");
+  
+  let offset = "+00:00";
+  if (tzNamePart && tzNamePart.value !== "GMT") {
+    const match = tzNamePart.value.match(/GMT([+-])(\d+)(?::(\d+))?/);
+    if (match) {
+      const sign = match[1];
+      const h = match[2].padStart(2, "0");
+      const m = (match[3] || "00").padStart(2, "0");
+      offset = `${sign}${h}:${m}`;
+    }
+  }
+  
+  return new Date(`${year}-${pad(month + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:${pad(seconds)}${offset}`);
+}
+
 function formatTime(isoString: string): string {
-  const d = new Date(isoString);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Lisbon",
+    });
+  } catch (e) {
+    return "";
+  }
 }
 
 function formatHour(timeStr: string): string {
@@ -250,13 +318,13 @@ const navItems = [
 
 export default function PainelPage() {
   const router = useRouter();
-  const today = new Date();
+  const lisbonToday = getLisbonDateParts(new Date());
 
   const [activeNav, setActiveNav] = useState("agenda");
 
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [calYear, setCalYear] = useState(lisbonToday.year);
+  const [calMonth, setCalMonth] = useState(lisbonToday.month - 1);
+  const [selectedDay, setSelectedDay] = useState(lisbonToday.day);
 
   const [agendamentos, setAgendamentos] = useState<ApiAgendamento[]>([]);
   const [servicos, setServicos] = useState<ApiServico[]>([]);
@@ -452,11 +520,11 @@ export default function PainelPage() {
   }, [fetchAgendamentos, fetchServicos, fetchProfissionais, fetchCategorias, fetchConfiguracoes, fetchAgendaBlocks, fetchProProfile]);
 
   const filteredAgendamentos = agendamentos.filter((a) => {
-    const d = new Date(a.inicio);
+    const parts = getLisbonDateParts(new Date(a.inicio));
     return (
-      d.getFullYear() === calYear &&
-      d.getMonth() === calMonth &&
-      d.getDate() === selectedDay
+      parts.year === calYear &&
+      parts.month - 1 === calMonth &&
+      parts.day === selectedDay
     );
   });
 
@@ -968,9 +1036,9 @@ export default function PainelPage() {
 
   const daysWithAppts = new Set(
     agendamentos.map((a) => {
-      const d = new Date(a.inicio);
-      if (d.getFullYear() === calYear && d.getMonth() === calMonth)
-        return d.getDate();
+      const parts = getLisbonDateParts(new Date(a.inicio));
+      if (parts.year === calYear && parts.month - 1 === calMonth)
+        return parts.day;
       return null;
     }).filter(Boolean)
   );
@@ -981,8 +1049,8 @@ export default function PainelPage() {
     ).length;
 
   const checkIsDayBlocked = (day: number) => {
-    const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
-    const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+    const dayStart = getLisbonDate(calYear, calMonth, day, 0, 0, 0);
+    const dayEnd = getLisbonDate(calYear, calMonth, day, 23, 59, 59);
     return agendaBlocks.some((block: any) => {
       if (block.motivo === "DESBLOQUEIO_FERIADO") return false; 
       const blockStart = new Date(block.inicio);
@@ -999,8 +1067,8 @@ export default function PainelPage() {
   };
 
   const checkIsHolidayUnblocked = (day: number) => {
-    const dayStart = new Date(calYear, calMonth, day, 0, 0, 0);
-    const dayEnd = new Date(calYear, calMonth, day, 23, 59, 59);
+    const dayStart = getLisbonDate(calYear, calMonth, day, 0, 0, 0);
+    const dayEnd = getLisbonDate(calYear, calMonth, day, 23, 59, 59);
     return agendaBlocks.some((block: any) => {
       if (block.motivo !== "DESBLOQUEIO_FERIADO") return false;
       const blockStart = new Date(block.inicio);
@@ -1326,7 +1394,7 @@ export default function PainelPage() {
 
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 truncate">
-                  {MONTH_NAMES[today.getMonth()]} {today.getFullYear()}
+                  {MONTH_NAMES[lisbonToday.month - 1]} {lisbonToday.year}
                 </p>
                 <h1
                   className="text-2xl sm:text-3xl text-foreground font-semibold truncate"
@@ -2083,10 +2151,10 @@ export default function PainelPage() {
               {cells.map((day, i) => {
                 if (!day) return <div key={i} />;
                 const isToday =
-                  day === today.getDate() &&
-                  calMonth === today.getMonth() &&
-                  calYear === today.getFullYear();
-                const isSelected = (day === selectedDay && calMonth === today.getMonth() && calYear === today.getFullYear()) || day === selectedDay;
+                  day === lisbonToday.day &&
+                  calMonth === lisbonToday.month - 1 &&
+                  calYear === lisbonToday.year;
+                const isSelected = day === selectedDay;
                 const hasAppts = daysWithAppts.has(day);
                 const isHoliday = getHolidayName(calYear, calMonth, day) !== null;
                 const isBlocked = checkIsDayBlocked(day);
@@ -2747,7 +2815,7 @@ export default function PainelPage() {
                     <span className="text-[10px] uppercase font-bold text-neutral-400">Data</span>
                     <p className="text-sm font-semibold text-neutral-800 flex items-center gap-1.5">
                       <Calendar size={12} className="text-neutral-400" />
-                      {new Date(selectedApptDetails.inicio).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}
+                      {new Date(selectedApptDetails.inicio).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Lisbon" })}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -2761,9 +2829,10 @@ export default function PainelPage() {
                         type="button"
                         onClick={() => {
                           const currentStart = new Date(selectedApptDetails.inicio);
+                          const parts = getLisbonDateParts(currentStart);
                           const pad = (n: number) => String(n).padStart(2, "0");
-                          setRescheduleDate(`${currentStart.getFullYear()}-${pad(currentStart.getMonth() + 1)}-${pad(currentStart.getDate())}`);
-                          setRescheduleTime(`${pad(currentStart.getHours())}:${pad(currentStart.getMinutes())}`);
+                          setRescheduleDate(`${parts.year}-${pad(parts.month)}-${pad(parts.day)}`);
+                          setRescheduleTime(`${pad(parts.hour)}:${pad(parts.minute)}`);
                           setRescheduleError(null);
                           setIsRescheduling(true);
                         }}

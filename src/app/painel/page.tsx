@@ -695,12 +695,20 @@ export default function PainelPage() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Erro no upload.");
+      const contentType = res.headers.get("content-type") || "";
+      let data: any = {};
+      if (contentType.includes("application/json")) {
+        data = await res.json().catch(() => ({}));
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Erro no servidor ao enviar imagem. Verifique se o bucket 'uploads' foi criado no Supabase.");
+      }
+
+      if (!data.url) {
+        throw new Error("Servidor não retornou a URL da imagem.");
+      }
+
       setServFotoUrl(data.url);
     } catch (err: any) {
       setModalError(err.message || "Erro ao carregar imagem.");
@@ -893,12 +901,20 @@ export default function PainelPage() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Erro no upload.");
+      const contentType = res.headers.get("content-type") || "";
+      let data: any = {};
+      if (contentType.includes("application/json")) {
+        data = await res.json().catch(() => ({}));
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Erro no servidor ao enviar imagem. Verifique se o bucket 'uploads' foi criado no Supabase.");
+      }
+
+      if (!data.url) {
+        throw new Error("Servidor não retornou a URL da imagem.");
+      }
+
       setProFotoUrl(data.url);
     } catch (err: any) {
       setProModalError(err.message || "Erro ao carregar imagem.");
@@ -2304,8 +2320,17 @@ export default function PainelPage() {
                                   method: "POST",
                                   body: formData,
                                 });
-                                if (!res.ok) throw new Error("Erro ao fazer upload");
-                                const uploadData = await res.json();
+                                const contentType = res.headers.get("content-type") || "";
+                                let uploadData: any = {};
+                                if (contentType.includes("application/json")) {
+                                  uploadData = await res.json().catch(() => ({}));
+                                }
+                                if (!res.ok) {
+                                  throw new Error(uploadData.message || "Erro no servidor ao enviar a logo.");
+                                }
+                                if (!uploadData.url) {
+                                  throw new Error("Servidor não retornou a URL da imagem.");
+                                }
                                 setSettingsForm((prev) => ({ ...prev, logo_url: uploadData.url }));
                               } catch (err: any) {
                                 setSettingsError("Falha no upload da logo: " + err.message);

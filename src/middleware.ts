@@ -18,12 +18,12 @@ export default async function middleware(req: NextRequest) {
   if (pathname.startsWith("/painel") || pathname.startsWith("/profissional")) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
-      return NextResponse.redirect(new URL("/profissional/login", req.nextUrl.origin));
+      return NextResponse.redirect(new URL("/login?role=profissional", req.nextUrl.origin));
     }
 
     const session = await verifyProToken(token);
     if (!session) {
-      const res = NextResponse.redirect(new URL("/profissional/login", req.nextUrl.origin));
+      const res = NextResponse.redirect(new URL("/login?role=profissional", req.nextUrl.origin));
       res.cookies.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
       return res;
     }

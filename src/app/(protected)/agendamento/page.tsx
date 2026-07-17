@@ -41,6 +41,34 @@ const getLisbonToday = () => {
   return new Date(parseInt(p.year), parseInt(p.month) - 1, parseInt(p.day));
 };
 
+/** Retorna o instante atual como se fosse um Date no fuso de Lisboa.
+ *  Usado para bloquear slots já passados pela hora de Lisboa. */
+const getLisbonNow = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(now);
+  const p: Record<string, string> = {};
+  parts.forEach(part => { p[part.type] = part.value; });
+  // Constrói um Date usando os valores de hora de Lisboa (sem fuso)
+  return new Date(
+    parseInt(p.year),
+    parseInt(p.month) - 1,
+    parseInt(p.day),
+    parseInt(p.hour === "24" ? "0" : p.hour),
+    parseInt(p.minute),
+    parseInt(p.second),
+  );
+};
+
 const DEFAULT_TIME_SLOTS = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
   "11:00", "11:15", "11:30", "13:30", "14:00", "14:30",
@@ -270,6 +298,17 @@ function AgendamentoContent() {
       if (slotMinutes < lunchEnd && endSlotMinutes > lunchStart) return true;
     }
 
+    // Bloquear horários passados (comparando em hora de Lisboa)
+    const lisbonNow = getLisbonNow();
+    const slotLisbonStart = new Date(
+      calYear,
+      calMonth,
+      selectedDay,
+      hours,
+      minutes,
+    );
+    if (slotLisbonStart < lisbonNow) return true;
+
     const slotStartStr = getLocalDateTimeString(
       calYear,
       calMonth,
@@ -277,9 +316,6 @@ function AgendamentoContent() {
       time,
     );
     const slotStart = new Date(slotStartStr);
-    
-    // Bloquear horários passados
-    if (slotStart < new Date()) return true;
 
     const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
     const doesOverlap = (sS: Date, sE: Date, rS: Date, rE: Date) =>

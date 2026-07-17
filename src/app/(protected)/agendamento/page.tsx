@@ -321,7 +321,6 @@ function AgendamentoContent() {
     const doesOverlap = (sS: Date, sE: Date, rS: Date, rE: Date) =>
       sS < rE && sE > rS;
 
-    // Capacidade = 2 profissionais: só bloquear quando ambos estiverem ocupados
     const CAPACIDADE = 2;
     const bookingsOverlap = activeBookings.filter((b: any) =>
       doesOverlap(slotStart, slotEnd, new Date(b.inicio), new Date(b.fim)),

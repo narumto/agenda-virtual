@@ -321,12 +321,13 @@ function AgendamentoContent() {
     const doesOverlap = (sS: Date, sE: Date, rS: Date, rE: Date) =>
       sS < rE && sE > rS;
 
-    if (
-      activeBookings.some((b: any) =>
-        doesOverlap(slotStart, slotEnd, new Date(b.inicio), new Date(b.fim)),
-      )
-    )
-      return true;
+    // Capacidade = 2 profissionais: só bloquear quando ambos estiverem ocupados
+    const CAPACIDADE = 2;
+    const bookingsOverlap = activeBookings.filter((b: any) =>
+      doesOverlap(slotStart, slotEnd, new Date(b.inicio), new Date(b.fim)),
+    ).length;
+    if (bookingsOverlap >= CAPACIDADE) return true;
+
     if (
       agendaBlocks.some((bl: any) =>
         doesOverlap(slotStart, slotEnd, new Date(bl.inicio), new Date(bl.fim)),

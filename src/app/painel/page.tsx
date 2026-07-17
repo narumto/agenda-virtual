@@ -6,6 +6,7 @@ import {
   Sparkles,
   CalendarDays,
   Scissors,
+  Tag,
   Users,
   Settings,
   LogOut,
@@ -312,6 +313,7 @@ function getInitials(name: string): string {
 const navItems = [
   { id: "agenda", label: "Agenda do Dia", icon: CalendarDays },
   { id: "services", label: "Serviços", icon: Scissors },
+  { id: "categories", label: "Categorias", icon: Tag },
   { id: "professionals", label: "Profissionais", icon: Users },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
@@ -393,6 +395,12 @@ export default function PainelPage() {
   const [uploading, setUploading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ApiCategoria | null>(null);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryModalLoading, setCategoryModalLoading] = useState(false);
+  const [categoryModalError, setCategoryModalError] = useState<string | null>(null);
 
   const [settingsForm, setSettingsForm] = useState({
     hora_abertura: "08:00",
@@ -762,6 +770,92 @@ export default function PainelPage() {
     );
   };
 
+  const handleOpenAddCategory = () => {
+    setEditingCategory(null);
+    setCategoryName("");
+    setCategoryModalError(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (category: ApiCategoria) => {
+    setEditingCategory(category);
+    setCategoryName(category.nome);
+    setCategoryModalError(null);
+    setOpenMenuId(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryName.trim()) {
+      setCategoryModalError("Preencha o nome da categoria.");
+      return;
+    }
+    setCategoryModalLoading(true);
+    setCategoryModalError(null);
+    try {
+      const payload = {
+        nome: categoryName.trim(),
+      };
+
+      if (editingCategory) {
+        const res = await fetch(`/api/categorias/${editingCategory.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || "Erro ao atualizar categoria");
+        }
+        const data = await res.json();
+        const updated: ApiCategoria = data.data || data;
+        setCategorias((prev) =>
+          prev.map((c) => (c.id === editingCategory.id ? updated : c))
+        );
+      } else {
+        const res = await fetch("/api/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || "Erro ao criar categoria");
+        }
+        const data = await res.json();
+        const created: ApiCategoria = data.data || data;
+        setCategorias((prev) => [...prev, created]);
+      }
+      setIsCategoryModalOpen(false);
+    } catch (e: any) {
+      setCategoryModalError(e.message);
+    } finally {
+      setCategoryModalLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    requestConfirmation(
+      "Excluir Categoria",
+      "Deseja realmente excluir esta categoria? Os serviços associados a ela poderão ficar sem categoria.",
+      async () => {
+        try {
+          const res = await fetch(`/api/categorias/${id}`, { method: "DELETE" });
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "Erro ao excluir categoria");
+          }
+          setCategorias((prev) => prev.filter((c) => c.id !== id));
+          setOpenMenuId(null);
+        } catch (e: any) {
+          setError(e.message);
+        }
+      },
+      "rose"
+    );
+  };
+
   const handleProFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -969,10 +1063,10 @@ export default function PainelPage() {
   const handleProLogout = async () => {
     try {
       await fetch("/api/profissionais/auth", { method: "DELETE" });
-      window.location.href = "/profissional/login";
+      window.location.href = "/login?role=profissional";
     } catch (e) {
       console.error("Erro ao fazer logout", e);
-      router.push("/profissional/login");
+      router.push("/login?role=profissional");
     }
   };
 
@@ -1402,6 +1496,7 @@ export default function PainelPage() {
                 >
                   {activeNav === "agenda" && "Agenda do Dia"}
                   {activeNav === "services" && "Nossos Serviços"}
+                  {activeNav === "categories" && "Categorias de Serviços"}
                   {activeNav === "professionals" && "Lista de Profissionais"}
                   {activeNav === "settings" && "Configurações do Painel"}
                 </h1>
@@ -1441,6 +1536,18 @@ export default function PainelPage() {
                 >
                   <Plus size={14} />
                   Novo Serviço
+                </button>
+              )}
+
+              {activeNav === "categories" && (
+                <button
+                  id="btn-new-category"
+                  onClick={handleOpenAddCategory}
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                  style={{ background: ACCENT }}
+                >
+                  <Plus size={14} />
+                  Nova Categoria
                 </button>
               )}
 
@@ -1675,13 +1782,17 @@ export default function PainelPage() {
                               {/* Active status */}
                               <td className="px-6 py-4">
                                 <span
-                                  className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full"
-                                  style={
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                                     service.ativo
-                                      ? { background: "#EAFAF1", color: "#1E8449" }
-                                      : { background: "#F4F4F4", color: "#7D7D7D" }
-                                  }
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : "bg-neutral-100 text-neutral-600"
+                                  }`}
                                 >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      service.ativo ? "bg-emerald-500" : "bg-neutral-400"
+                                    }`}
+                                  />
                                   {service.ativo ? "Ativo" : "Inativo"}
                                 </span>
                               </td>
@@ -1689,18 +1800,14 @@ export default function PainelPage() {
                               {/* Actions */}
                               <td className="px-6 py-4 text-right relative">
                                 <button
-                                  onClick={() =>
-                                    setOpenMenuId(openMenuId === service.id ? null : service.id)
-                                  }
-                                  className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 hover:text-neutral-800 transition-colors inline-block cursor-pointer"
+                                  onClick={() => setOpenMenuId(openMenuId === service.id ? null : service.id)}
+                                  className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
                                 >
                                   <MoreHorizontal size={16} />
                                 </button>
 
                                 {openMenuId === service.id && (
-                                  <div className={`absolute right-6 z-20 bg-white border border-border rounded-xl shadow-lg py-1.5 min-w-[130px] text-left ${
-                                    servicos.length > 1 && index === servicos.length - 1 ? 'bottom-10' : 'top-12'
-                                  }`}>
+                                  <div className="absolute right-6 top-12 z-10 w-36 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 overflow-hidden">
                                     <button
                                       onClick={() => handleOpenEdit(service)}
                                       className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
@@ -1717,6 +1824,72 @@ export default function PainelPage() {
                                     </button>
                                   </div>
                                 )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CATEGORIES TAB */}
+          {activeNav === "categories" && (
+            <div className="space-y-6">
+              {categorias.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-border p-12 text-center text-muted-foreground">
+                  <Tag size={48} className="mx-auto text-neutral-300 mb-4" />
+                  <p className="text-lg">Nenhuma categoria cadastrada.</p>
+                  <p className="text-sm mt-1">Crie uma nova categoria no botão acima.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-neutral-50 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          <th className="px-6 py-4">Nome da Categoria</th>
+                          <th className="px-6 py-4">Serviços Associados</th>
+                          <th className="px-6 py-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {categorias.map((category) => {
+                          const assocServicesCount = servicos.filter(
+                            (s) => s.categoria_id === category.id
+                          ).length;
+                          return (
+                            <tr key={category.id} className="hover:bg-neutral-50/50 transition-all">
+                              <td className="px-6 py-4">
+                                <span className="text-sm font-semibold text-neutral-800">
+                                  {category.nome}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-neutral-600">
+                                  {assocServicesCount} {assocServicesCount === 1 ? "serviço" : "serviços"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleOpenEditCategory(category)}
+                                    className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                    title="Editar"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCategory(category.id)}
+                                    className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2535,6 +2708,70 @@ export default function PainelPage() {
                   style={{ background: ACCENT }}
                 >
                   {modalLoading ? "Salvando..." : editingService ? "Atualizar" : "Criar Serviço"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CATEGORY CREATION / EDITION ── */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between">
+              <h2
+                className="text-xl text-foreground font-semibold"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                {editingCategory ? "Editar Categoria" : "Nova Categoria"}
+              </h2>
+              <button
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveCategory} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+                  Nome da Categoria *
+                </label>
+                <input
+                  type="text"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  placeholder="Ex: Tratamentos Faciais, Massagens, etc."
+                  className="w-full px-4 py-3 rounded-2xl border border-neutral-200 focus:outline-none focus:border-[#C49A82] focus:ring-1 focus:ring-[#C49A82] text-sm text-neutral-800 transition-colors"
+                />
+              </div>
+
+              {categoryModalError && (
+                <div className="flex items-center gap-2 p-3 bg-rose-50 text-rose-800 border border-rose-100 rounded-xl text-sm">
+                  <AlertTriangle size={15} />
+                  {categoryModalError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="px-5 py-2.5 rounded-full text-sm font-medium border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={categoryModalLoading}
+                  className="px-6 py-2.5 rounded-full text-sm font-semibold text-white shadow hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-60"
+                  style={{ background: ACCENT }}
+                >
+                  {categoryModalLoading ? "Salvando..." : editingCategory ? "Atualizar" : "Criar Categoria"}
                 </button>
               </div>
             </form>

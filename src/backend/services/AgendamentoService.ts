@@ -114,6 +114,16 @@ export class AgendamentoService {
       throw new Error("Horário de início deve ser anterior ao de término");
     }
 
+    // Não permitir agendamentos em datas ou horários passados na criação do agendamento
+    if (!excludeId) {
+      const now = new Date();
+      // Tolerância de 5 minutos para compensar latência de rede ou pequenas diferenças de relógio
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      if (start < fiveMinutesAgo) {
+        throw new Error("Não é possível realizar agendamento em data ou horário que já passou.");
+      }
+    }
+
     const patient = await this.pacienteRepo.find(data.paciente_id);
     if (!patient) throw new Error("Paciente não cadastrado");
 

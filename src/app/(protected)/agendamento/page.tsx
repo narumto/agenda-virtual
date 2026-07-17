@@ -28,6 +28,19 @@ const getHolidayName = (year: number, month: number, day: number): string | null
   return null;
 };
 
+const getLisbonToday = () => {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const p: Record<string, string> = {};
+  parts.forEach(part => { p[part.type] = part.value; });
+  return new Date(parseInt(p.year), parseInt(p.month) - 1, parseInt(p.day));
+};
+
 const DEFAULT_TIME_SLOTS = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
   "11:00", "11:15", "11:30", "13:30", "14:00", "14:30",
@@ -85,7 +98,7 @@ function AgendamentoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userProfile, signOut } = useAuth();
-  const today = new Date();
+  const today = getLisbonToday();
 
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
@@ -191,9 +204,7 @@ function AgendamentoContent() {
 
   const isPast = (day: number) => {
     const d = new Date(calYear, calMonth, day);
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return d < t;
+    return d < today;
   };
 
   const isDayDisabled = (day: number) => {
@@ -266,6 +277,10 @@ function AgendamentoContent() {
       time,
     );
     const slotStart = new Date(slotStartStr);
+    
+    // Bloquear horários passados
+    if (slotStart < new Date()) return true;
+
     const slotEnd = new Date(slotStart.getTime() + slotDuration * 60 * 1000);
     const doesOverlap = (sS: Date, sE: Date, rS: Date, rE: Date) =>
       sS < rE && sE > rS;

@@ -32,12 +32,12 @@ export class BaseRepository<T, IDType = string> {
       .from(this.tableName)
       .insert(item as any)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw error;
     }
-    return data as T;
+    return (Array.isArray(data) ? data[0] : data) as T;
   }
 
   async update(id: IDType, item: Partial<T>): Promise<T> {
@@ -46,12 +46,12 @@ export class BaseRepository<T, IDType = string> {
       .update(item as any)
       .eq(this.primaryKeyName, id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw error;
     }
-    return data as T;
+    return (Array.isArray(data) ? data[0] : data) as T;
   }
 
   async delete(id: IDType): Promise<boolean> {

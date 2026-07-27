@@ -53,6 +53,8 @@ export class PacienteService {
     if (data.telefone !== undefined) updateData.telefone = data.telefone;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.google_id !== undefined) updateData.google_id = data.google_id;
+    if (data.data_nascimento !== undefined) updateData.data_nascimento = data.data_nascimento;
+    if (data.nif !== undefined) updateData.nif = data.nif;
 
     return await this.repository.update(id, updateData);
   }

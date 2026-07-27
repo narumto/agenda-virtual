@@ -9,6 +9,8 @@ export class PacienteResource extends BaseResource<Paciente> {
       telefone: this.resource.telefone,
       email: this.resource.email || null,
       google_id: this.resource.google_id || null,
+      data_nascimento: this.resource.data_nascimento || null,
+      nif: this.resource.nif || null,
       created_at: this.resource.created_at,
       updated_at: this.resource.updated_at,
     };

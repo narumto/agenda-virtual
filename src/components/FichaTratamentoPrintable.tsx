@@ -85,7 +85,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* Data de nascimento */}
           <div
-            className="absolute font-medium text-stone-900 flex items-center justify-center text-center"
+            className="absolute font-medium text-stone-900 flex items-center justify-start tracking-wider px-1 text-[11px]"
             style={{ top: "28.5%", left: "20.5%", width: "31%", height: "2.0%" }}
           >
             {formatDate(paciente.data_nascimento)}
@@ -213,8 +213,8 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* Data do Rodapé */}
           <div
-            className="absolute text-stone-900 flex items-center justify-center text-center text-[10px] font-medium"
-            style={{ top: "92.2%", left: "5.5%", width: "15.0%", height: "2.0%" }}
+            className="absolute text-stone-900 flex items-center justify-center text-center text-[10px] font-semibold"
+            style={{ top: "91.0%", left: "5.5%", width: "15.0%", height: "2.0%" }}
           >
             {formatDate(new Date().toISOString())}
           </div>

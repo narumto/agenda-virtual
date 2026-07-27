@@ -54,6 +54,10 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
             background: white !important;
             color: black !important;
           }
+          #ficha-printable > div {
+            width: 210mm !important;
+            height: 297mm !important;
+          }
           @page {
             size: A4 portrait;
             margin: 0;
@@ -213,8 +217,8 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* Data do Rodapé */}
           <div
-            className="absolute text-stone-900 flex items-center justify-center text-center text-[10px] font-semibold"
-            style={{ top: "91.0%", left: "5.5%", width: "15.0%", height: "2.0%" }}
+            className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-wider"
+            style={{ top: "89.7%", left: "4.8%", width: "16.0%", height: "2.0%" }}
           >
             {formatDate(new Date().toISOString())}
           </div>

@@ -733,7 +733,14 @@ export function FichaTratamentoModal({
       </div>
 
       {/* Componente Oculto em Tela, Ativado Apenas no window.print() */}
-      <FichaTratamentoPrintable paciente={paciente} ficha={currentFicha} />
+      <FichaTratamentoPrintable
+        paciente={{
+          ...paciente,
+          data_nascimento: dataNascimento || paciente.data_nascimento,
+          nif: nif || paciente.nif,
+        }}
+        ficha={currentFicha}
+      />
     </div>
   );
 }

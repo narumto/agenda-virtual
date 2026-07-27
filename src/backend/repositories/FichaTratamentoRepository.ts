@@ -44,10 +44,10 @@ export class FichaTratamentoRepository extends BaseRepository<FichaTratamento, s
       .from("sessoes_tratamento")
       .insert(sessao as any)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
-    return data as SessaoTratamento;
+    return (Array.isArray(data) ? data[0] : data) as SessaoTratamento;
   }
 
   async deleteSessao(sessaoId: string): Promise<boolean> {
@@ -65,10 +65,10 @@ export class FichaTratamentoRepository extends BaseRepository<FichaTratamento, s
       .from("regioes_adicionais")
       .insert(regiao as any)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
-    return data as RegiaoAdicional;
+    return (Array.isArray(data) ? data[0] : data) as RegiaoAdicional;
   }
 
   async deleteRegiaoAdicional(regiaoId: string): Promise<boolean> {

@@ -73,6 +73,24 @@ export function FichaTratamentoModal({
   // General notes save state for selected ficha
   const [observacoesGerais, setObservacoesGerais] = useState("");
 
+  const formatDate = (dStr?: string | null) => {
+    if (!dStr) return "";
+    const match = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    try {
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return dStr;
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dStr;
+    }
+  };
+
   // Initialize patient data and fetch fichas
   useEffect(() => {
     if (paciente) {
@@ -631,7 +649,7 @@ export function FichaTratamentoModal({
                       currentFicha.sessoes.map((s) => (
                         <tr key={s.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
                           <td className="p-3 font-medium text-stone-800 dark:text-stone-200">
-                            {new Date(s.data_sessao).toLocaleDateString("pt-PT")}
+                            {formatDate(s.data_sessao)}
                           </td>
                           <td className="p-3 font-semibold text-amber-800 dark:text-amber-400">
                             {s.numero_sessao}ª Sessão

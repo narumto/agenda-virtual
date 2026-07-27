@@ -15,10 +15,17 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
   const formatDate = (dStr?: string | null) => {
     if (!dStr) return "";
+    const match = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
     try {
       const d = new Date(dStr);
       if (isNaN(d.getTime())) return dStr;
-      return d.toLocaleDateString("pt-PT");
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
     } catch {
       return dStr;
     }

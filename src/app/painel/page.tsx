@@ -36,6 +36,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import Holidays from "date-holidays";
+import { FichaTratamentoModal } from "@/components/FichaTratamentoModal";
 
 const hd = new Holidays("PT");
 
@@ -360,6 +361,9 @@ export default function PainelPage() {
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+
+  const [isFichaModalOpen, setIsFichaModalOpen] = useState(false);
+  const [fichaPaciente, setFichaPaciente] = useState<any>(null);
 
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [editingPro, setEditingPro] = useState<ApiProfissional | null>(null);
@@ -3156,6 +3160,20 @@ export default function PainelPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Botão Ficha de Tratamento / Laser */}
+                {selectedApptDetails.paciente && (
+                  <button
+                    onClick={() => {
+                      setFichaPaciente(selectedApptDetails.paciente);
+                      setIsFichaModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-700 via-amber-800 to-stone-900 text-amber-100 rounded-xl text-xs font-semibold shadow hover:opacity-95 transition-all cursor-pointer"
+                  >
+                    <Sparkles size={14} className="text-amber-300" />
+                    <span>Ficha de Tratamento — Depilação a Laser</span>
+                  </button>
+                )}
               </div>
 
               {/* Agendamento Section */}
@@ -3349,6 +3367,15 @@ export default function PainelPage() {
           onClick={() => { setOpenMenuId(null); setOpenAppointmentMenuId(null); }}
         />
       )}
+
+      {/* Modal Ficha de Tratamento */}
+      <FichaTratamentoModal
+        isOpen={isFichaModalOpen}
+        onClose={() => setIsFichaModalOpen(false)}
+        paciente={fichaPaciente}
+        agendamentoId={selectedApptDetails?.id}
+        servicoNome={selectedApptDetails?.servico?.nome}
+      />
     </div>
   );
 }

@@ -340,15 +340,15 @@ function AgendamentoContent() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-        <div className="w-8 h-8 border-4 border-[#C49A82] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div
-      className="min-h-screen bg-[#FAF9F6]"
+      className="min-h-screen bg-background text-foreground"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
       <AppHeader
@@ -360,21 +360,17 @@ function AgendamentoContent() {
       />
 
       {errorMsg && (
-        <div className="max-w-md mx-auto mt-6 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl text-center text-sm font-medium">
+        <div className="max-w-md mx-auto mt-6 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-4 py-3 rounded-2xl text-center text-sm font-medium">
           {errorMsg}
         </div>
       )}
 
       <div className="text-center pt-10 pb-2">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-[#C49A82] font-semibold mb-2">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-semibold mb-2">
           Etapa 2 de 3
         </p>
         <h1
-          className="text-3xl text-[#2B2723]"
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 400,
-          }}
+          className="text-3xl font-serif text-foreground font-normal"
         >
           Escolha a Data e Hora
         </h1>
@@ -614,8 +610,8 @@ export default function AgendamentoPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
-          <div className="w-8 h-8 border-4 border-[#C49A82] border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

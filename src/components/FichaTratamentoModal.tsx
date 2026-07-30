@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   Printer,
+  Search,
+  History,
 } from "lucide-react";
 import { Paciente, FichaTratamento, SessaoTratamento } from "@/types";
 import { FichaTratamentoPrintable } from "./FichaTratamentoPrintable";
@@ -44,9 +46,18 @@ export function FichaTratamentoModal({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Active patient & list for selection
+  const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(paciente);
+  const [pacientesList, setPacientesList] = useState<Paciente[]>([]);
+
   // Patient editable extra fields
   const [dataNascimento, setDataNascimento] = useState("");
   const [nif, setNif] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
+
+  // Patient's history of appointments / consultations
+  const [historicoAgendamentos, setHistoricoAgendamentos] = useState<any[]>([]);
 
   // Fichas state
   const [fichas, setFichas] = useState<FichaTratamento[]>([]);
@@ -94,28 +105,106 @@ export function FichaTratamentoModal({
   const formatPortuguesePhone = (phone?: string | null) => {
     if (!phone) return "";
     let cleaned = phone.replace(/\D/g, "");
+    if (!cleaned) return "";
+
     let hasCountryCode = false;
-    if (cleaned.startsWith("351") && cleaned.length > 9) {
+    if (cleaned.startsWith("351")) {
       cleaned = cleaned.substring(3);
       hasCountryCode = true;
     }
-    if (cleaned.length === 9) {
-      const part1 = cleaned.substring(0, 3);
-      const part2 = cleaned.substring(3, 6);
-      const part3 = cleaned.substring(6, 9);
-      return hasCountryCode ? `+351 ${part1} ${part2} ${part3}` : `${part1} ${part2} ${part3}`;
+
+    if (cleaned.length > 9) {
+      cleaned = cleaned.substring(0, 9);
     }
-    return phone;
+
+    let formatted = "";
+    if (cleaned.length <= 3) {
+      formatted = cleaned;
+    } else if (cleaned.length <= 6) {
+      formatted = `${cleaned.substring(0, 3)} ${cleaned.substring(3)}`;
+    } else {
+      formatted = `${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}`;
+    }
+
+    return hasCountryCode ? `+351 ${formatted}`.trim() : formatted;
   };
 
-  // Initialize patient data and fetch fichas
+  // Keep selectedPaciente in sync with prop
   useEffect(() => {
-    if (paciente) {
-      setDataNascimento(paciente.data_nascimento ? paciente.data_nascimento.split("T")[0] : "");
-      setNif(paciente.nif || "");
-      fetchFichas(paciente.id);
-    }
+    setSelectedPaciente(paciente);
   }, [paciente]);
+
+  // Fetch full patient data (profile, fichas, consultations) whenever selectedPaciente changes
+  useEffect(() => {
+    if (isOpen && selectedPaciente?.id) {
+      fetchPatientData(selectedPaciente.id);
+    }
+  }, [isOpen, selectedPaciente?.id]);
+
+  // Fetch list of all patients for search / dropdown selection
+  useEffect(() => {
+    if (isOpen) {
+      fetchPacientesList();
+    }
+  }, [isOpen]);
+
+  const fetchPacientesList = async () => {
+    try {
+      const res = await fetch("/api/pacientes");
+      if (res.ok) {
+        const data = await res.json();
+        setPacientesList(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      // silent fallback
+    }
+  };
+
+  const fetchPatientData = async (pacienteId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [resPaciente, resFichas, resAgendamentos] = await Promise.all([
+        fetch(`/api/pacientes/${pacienteId}`).catch(() => null),
+        fetch(`/api/fichas?paciente_id=${pacienteId}`).catch(() => null),
+        fetch(`/api/agendamentos?paciente_id=${pacienteId}`).catch(() => null),
+      ]);
+
+      if (resPaciente && resPaciente.ok) {
+        const pData = await resPaciente.json();
+        if (pData) {
+          setSelectedPaciente(pData);
+          setDataNascimento(pData.data_nascimento ? pData.data_nascimento.split("T")[0] : "");
+          setNif(pData.nif || "");
+          setTelefone(formatPortuguesePhone(pData.telefone || ""));
+          setEmail(pData.email || "");
+        }
+      }
+
+      if (resFichas && resFichas.ok) {
+        const fData: FichaTratamento[] = await resFichas.json();
+        setFichas(fData);
+        if (fData.length > 0) {
+          setSelectedFichaId(fData[0].id);
+          setObservacoesGerais(fData[0].observacoes_gerais || "");
+          setZonaTratada(fData[0].procedimento_zona || servicoNome || "");
+          setNumSessao((fData[0].sessoes?.length || 0) + 1);
+        } else if (servicoNome) {
+          setProcedimentoZona(servicoNome);
+          setZonaTratada(servicoNome);
+        }
+      }
+
+      if (resAgendamentos && resAgendamentos.ok) {
+        const aData = await resAgendamentos.json();
+        setHistoricoAgendamentos(Array.isArray(aData) ? aData : []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Erro ao carregar dados do paciente.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchFichas = async (pacienteId: string) => {
     setLoading(true);
@@ -152,19 +241,24 @@ export function FichaTratamentoModal({
     }
   };
 
-  if (!isOpen || !paciente) return null;
+  const currentPaciente = selectedPaciente || paciente;
+
+  if (!isOpen || !currentPaciente) return null;
 
   const currentFicha = fichas.find((f) => f.id === selectedFichaId) || fichas[0];
 
   const handleSavePacienteData = async () => {
+    if (!currentPaciente) return;
     setSavingPaciente(true);
     setError(null);
     setSuccessMsg(null);
     try {
-      const res = await fetch(`/api/pacientes/${paciente.id}`, {
+      const formattedPhone = formatPortuguesePhone(telefone);
+      const res = await fetch(`/api/pacientes/${currentPaciente.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          telefone: formattedPhone || null,
           data_nascimento: dataNascimento || null,
           nif: nif || null,
         }),
@@ -175,6 +269,7 @@ export function FichaTratamentoModal({
         throw new Error(errData.message || "Erro ao atualizar dados do paciente");
       }
 
+      setTelefone(formattedPhone);
       setSuccessMsg("Dados do paciente salvos com sucesso!");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
@@ -197,7 +292,7 @@ export function FichaTratamentoModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paciente_id: paciente.id,
+          paciente_id: currentPaciente.id,
           procedimento_zona: procedimentoZona.trim(),
           sessoes_adquiridas: sessoesAdquiridas,
           validade: validadeFicha || null,
@@ -369,6 +464,32 @@ export function FichaTratamentoModal({
         {/* Modal Body */}
         <div className="p-6 space-y-8 max-h-[75vh] overflow-y-auto">
 
+          {/* 0. SELETOR E BUSCA RÁPIDA DE CLIENTE */}
+          {pacientesList.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/80 dark:bg-amber-950/40 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/60">
+              <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-300">
+                <Search size={15} className="shrink-0 text-amber-700 dark:text-amber-400" />
+                <span>Alternar ou Buscar Cliente:</span>
+              </div>
+              <select
+                value={currentPaciente.id}
+                onChange={(e) => {
+                  const found = pacientesList.find((p) => p.id === e.target.value);
+                  if (found) {
+                    setSelectedPaciente(found);
+                  }
+                }}
+                className="px-3 py-1.5 bg-white dark:bg-stone-900 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-medium text-stone-800 dark:text-stone-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+              >
+                {pacientesList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} {p.telefone ? `(${formatPortuguesePhone(p.telefone)})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* 1. DADOS DA CLIENTE (PRÉ-PREENCHIDOS) */}
           <section className="bg-stone-50 dark:bg-stone-800/50 p-5 rounded-xl border border-stone-200 dark:border-stone-700/60">
             <div className="flex items-center justify-between mb-4">
@@ -390,15 +511,21 @@ export function FichaTratamentoModal({
                 <label className="block text-xs font-medium text-stone-500 mb-1">Nome Completo</label>
                 <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 font-medium">
                   <User size={14} className="text-stone-400 shrink-0" />
-                  <span className="truncate">{paciente.nome}</span>
+                  <span className="truncate">{currentPaciente.nome}</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-stone-500 mb-1">Telemóvel</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200">
-                  <Phone size={14} className="text-stone-400 shrink-0" />
-                  <span>{formatPortuguesePhone(paciente.telefone)}</span>
+                <div className="relative flex items-center">
+                  <Phone size={14} className="absolute left-3 text-stone-400 pointer-events-none" />
+                  <input
+                    type="tel"
+                    placeholder="ex: 912 345 678 ou +351 912 345 678"
+                    value={telefone}
+                    onChange={(e) => setTelefone(formatPortuguesePhone(e.target.value))}
+                    className="w-full pl-9 pr-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 outline-none font-medium"
+                  />
                 </div>
               </div>
 
@@ -406,7 +533,7 @@ export function FichaTratamentoModal({
                 <label className="block text-xs font-medium text-stone-500 mb-1">E-mail</label>
                 <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200">
                   <Mail size={14} className="text-stone-400 shrink-0" />
-                  <span className="truncate">{paciente.email || "Não informado"}</span>
+                  <span className="truncate">{email || currentPaciente.email || "Não informado"}</span>
                 </div>
               </div>
 
@@ -703,6 +830,95 @@ export function FichaTratamentoModal({
             </section>
           )}
 
+          {/* 4. HISTÓRICO DE CONSULTAS E AGENDAMENTOS DA CLIENTE */}
+          <section className="space-y-4 border-t border-stone-200 dark:border-stone-800 pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-2">
+                  <History size={16} /> ÚLTIMAS CONSULTAS & AGENDAMENTOS
+                </h3>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Histórico de agendamentos na clínica (Serviço, Profissional e Estado)
+                </p>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold">
+                {historicoAgendamentos.length} consulta(s)
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-800">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 uppercase tracking-wider font-semibold border-b border-stone-200 dark:border-stone-700">
+                  <tr>
+                    <th className="p-3">Data / Hora</th>
+                    <th className="p-3">Serviço / Procedimento</th>
+                    <th className="p-3">Profissional</th>
+                    <th className="p-3">Estado</th>
+                    <th className="p-3 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-200 dark:divide-stone-800 bg-white dark:bg-stone-900">
+                  {historicoAgendamentos.length > 0 ? (
+                    historicoAgendamentos.map((app) => (
+                      <tr key={app.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                        <td className="p-3 font-medium text-stone-800 dark:text-stone-200 whitespace-nowrap">
+                          {formatDate(app.inicio)}
+                          {app.inicio && (
+                            <span className="text-stone-400 ml-1.5 text-[11px]">
+                              {new Date(app.inicio).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 font-semibold text-stone-700 dark:text-stone-300">
+                          {app.servico?.nome || "Serviço não especificado"}
+                        </td>
+                        <td className="p-3 text-stone-600 dark:text-stone-400">
+                          {app.profissional?.nome || "—"}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${
+                              app.status === "CONCLUIDO"
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                : app.status === "CONFIRMADO"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                                : app.status === "CANCELADO"
+                                ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                            }`}
+                          >
+                            {app.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (app.servico?.nome) setZonaTratada(app.servico.nome);
+                              if (app.inicio) setDataSessao(app.inicio.split("T")[0]);
+                              setShowNewSessaoForm(true);
+                            }}
+                            className="px-2.5 py-1 text-[11px] bg-amber-700 hover:bg-amber-800 text-white rounded-lg transition-colors font-medium shadow-sm inline-flex items-center gap-1 cursor-pointer"
+                            title="Usar esta consulta para preencher a nova sessão"
+                          >
+                            <Zap size={12} />
+                            <span>Puxar p/ Sessão</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-stone-400 italic">
+                        Nenhum agendamento / consulta anterior encontrado para esta cliente.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           {/* 4. OBSERVAÇÕES GERAIS DA FICHA */}
           {currentFicha && (
             <section className="space-y-2 border-t border-stone-200 dark:border-stone-800 pt-6">
@@ -752,9 +968,10 @@ export function FichaTratamentoModal({
       {/* Componente Oculto em Tela, Ativado Apenas no window.print() */}
       <FichaTratamentoPrintable
         paciente={{
-          ...paciente,
-          data_nascimento: dataNascimento || paciente.data_nascimento,
-          nif: nif || paciente.nif,
+          ...currentPaciente,
+          telefone: telefone || currentPaciente.telefone,
+          data_nascimento: dataNascimento || currentPaciente.data_nascimento,
+          nif: nif || currentPaciente.nif,
         }}
         ficha={currentFicha}
       />

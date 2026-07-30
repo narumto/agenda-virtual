@@ -11,46 +11,8 @@ interface FichaTratamentoPrintableProps {
 
 export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: FichaTratamentoPrintableProps) {
   const sessoes = ficha?.sessoes || [];
-  const sessoesAdquiridasCount = ficha?.sessoes_adquiridas || 10;
-  
-  const sessoesExibidas = sessoes.length > 0 ? sessoes.slice(0, 4) : [
-    {
-      id: "mock-1",
-      data_sessao: "2026-07-01",
-      numero_sessao: 1,
-      zona_tratada: "Axilas",
-      potencia: "18 J",
-      ponteira: "Spot 12",
-      observacoes: "Sem intercorrências"
-    },
-    {
-      id: "mock-2",
-      data_sessao: "2026-07-08",
-      numero_sessao: 2,
-      zona_tratada: "Axilas",
-      potencia: "20 J",
-      ponteira: "Spot 12",
-      observacoes: "Reação normal"
-    },
-    {
-      id: "mock-3",
-      data_sessao: "2026-07-15",
-      numero_sessao: 3,
-      zona_tratada: "Axilas",
-      potencia: "22 J",
-      ponteira: "Spot 12",
-      observacoes: "Leve eritema"
-    },
-    {
-      id: "mock-4",
-      data_sessao: "2026-07-22",
-      numero_sessao: 4,
-      zona_tratada: "Axilas",
-      potencia: "24 J",
-      ponteira: "Spot 12",
-      observacoes: "Tolerou muito bem"
-    }
-  ];
+  const sessoesAdquiridasCount = ficha?.sessoes_adquiridas ?? "";
+  const sessoesExibidas = sessoes.slice(0, 4);
 
   const formatDate = (dStr?: string | null) => {
     if (!dStr) return "";
@@ -207,13 +169,13 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
             className="absolute font-medium text-stone-900 flex items-center justify-center text-center px-1"
             style={{ top: "43.7%", left: "5.0%", width: "34.0%", height: "2.4%" }}
           >
-            {ficha?.procedimento_zona || "Depilação a Laser"}
+            {ficha?.procedimento_zona || ""}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
             style={{ top: "43.7%", left: "39.5%", width: "18.5%", height: "2.4%" }}
           >
-            {formatDate(ficha?.data_aquisicao) || formatDate(new Date().toISOString())}
+            {formatDate(ficha?.data_aquisicao) || ""}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center font-semibold"
@@ -225,7 +187,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
             className="absolute text-stone-900 flex items-center justify-center text-center"
             style={{ top: "43.7%", left: "76.0%", width: "19.0%", height: "2.4%" }}
           >
-            {formatDate(ficha?.validade) || "—"}
+            {formatDate(ficha?.validade) || ""}
           </div>
 
 
@@ -299,7 +261,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Data do Rodapé */}
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-widest"
-            style={{ top: "94.2%", left: "4.8%", width: "16.0%", height: "2.0%", whiteSpace: "pre" }}
+            style={{ top: "91.7%", left: "4.8%", width: "16.0%", height: "2.0%", whiteSpace: "pre" }}
           >
             {formatSpacedBirthdate(new Date().toISOString())}
           </div>

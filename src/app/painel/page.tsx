@@ -37,14 +37,16 @@ import {
 } from "lucide-react";
 import Holidays from "date-holidays";
 import { FichaTratamentoModal } from "@/components/FichaTratamentoModal";
+import { FichaTratamentoManager } from "@/components/FichaTratamentoManager";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const hd = new Holidays("PT");
 
-const ACCENT = "#C49A82";
-const ACCENT_LIGHT = "#F5EDE6";
-const SIDEBAR_BG = "#1E1B18";
-const SIDEBAR_TEXT = "#C8BFB8";
-const SIDEBAR_ACTIVE_BG = "#2D2722";
+const ACCENT = "var(--accent)";
+const ACCENT_LIGHT = "var(--accent-light)";
+const SIDEBAR_BG = "var(--sidebar-bg)";
+const SIDEBAR_TEXT = "var(--sidebar-text)";
+const SIDEBAR_ACTIVE_BG = "var(--sidebar-active-bg)";
 
 type AgendamentoStatus = "PENDENTE" | "CONFIRMADO" | "CONCLUIDO" | "CANCELADO" | "FALTOU";
 
@@ -313,6 +315,7 @@ function getInitials(name: string): string {
 
 const navItems = [
   { id: "agenda", label: "Agenda do Dia", icon: CalendarDays },
+  { id: "fichas", label: "Fichas de Tratamento", icon: ClipboardList },
   { id: "services", label: "Serviços", icon: Scissors },
   { id: "categories", label: "Categorias", icon: Tag },
   { id: "professionals", label: "Profissionais", icon: Users },
@@ -1337,8 +1340,8 @@ export default function PainelPage() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden relative"
-      style={{ fontFamily: "'DM Sans', sans-serif", background: "#F5F0EB" }}
+      className="flex h-screen overflow-hidden relative bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300"
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
       {/* ── Sidebar ── */}
       <aside
@@ -1499,6 +1502,7 @@ export default function PainelPage() {
                   style={{ fontFamily: "'Playfair Display', serif" }}
                 >
                   {activeNav === "agenda" && "Agenda do Dia"}
+                  {activeNav === "fichas" && "Fichas de Tratamento — Depilação a Laser"}
                   {activeNav === "services" && "Nossos Serviços"}
                   {activeNav === "categories" && "Categorias de Serviços"}
                   {activeNav === "professionals" && "Lista de Profissionais"}
@@ -1508,6 +1512,7 @@ export default function PainelPage() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <ThemeToggle />
               {activeNav === "agenda" && (
                 <>
                   <button
@@ -1584,11 +1589,11 @@ export default function PainelPage() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-2xl bg-white border border-border p-5 shadow-sm"
+                    className="rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-5 shadow-sm"
                   >
                     <div className="w-2 h-2 rounded-full mb-3" style={{ background: stat.color }} />
-                    <p className="text-2xl font-bold text-foreground mb-1">{stat.value}</p>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                    <p className="text-2xl font-bold text-stone-900 dark:text-stone-100 mb-1">{stat.value}</p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 uppercase tracking-wider font-medium">
                       {stat.label}
                     </p>
                   </div>
@@ -1596,28 +1601,28 @@ export default function PainelPage() {
               </div>
 
               {/* Agendamentos list */}
-              <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                  <h2 className="text-sm font-semibold text-foreground">
+              <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800">
+                  <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                     Agendamentos — {selectedDay} de {MONTH_NAMES[calMonth]}
                   </h2>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-stone-500 dark:text-stone-400">
                     {sortedAgendamentos.length} registros
                   </span>
                 </div>
 
                 {loadingAgendamentos ? (
                   <div className="flex items-center justify-center py-16">
-                    <div className="w-6 h-6 border-2 border-[#C49A82] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : sortedAgendamentos.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                    <CalendarDays size={40} className="text-neutral-200 mb-3" />
+                  <div className="flex flex-col items-center justify-center py-16 text-stone-400 dark:text-stone-500">
+                    <CalendarDays size={40} className="text-stone-300 dark:text-stone-700 mb-3" />
                     <p className="text-sm">Nenhum agendamento neste dia.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-border" style={{ minHeight: sortedAgendamentos.length > 0 && sortedAgendamentos.length <= 2 ? '240px' : 'auto' }}>
-                    {sortedAgendamentos.map((appt, index) => {
+                  <div className="divide-y divide-stone-200 dark:divide-stone-800" style={{ minHeight: sortedAgendamentos.length > 0 && sortedAgendamentos.length <= 2 ? '240px' : 'auto' }}>
+                    {sortedAgendamentos.map((appt) => {
                       const displayStatus = STATUS_API_TO_DISPLAY[appt.status];
                       const cfg = STATUS_CONFIG[displayStatus];
                       const Icon = cfg.icon;
@@ -1633,11 +1638,11 @@ export default function PainelPage() {
                           key={appt.id}
                           id={`appt-${appt.id}`}
                           onClick={() => setSelectedApptDetails(appt)}
-                          className="flex items-center gap-4 px-6 py-4 hover:bg-secondary/35 transition-colors cursor-pointer"
+                          className="flex items-center gap-4 px-6 py-4 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors cursor-pointer"
                         >
                           {/* Time */}
                           <div className="w-16 shrink-0">
-                            <p className="text-sm font-semibold text-foreground">
+                            <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
                               {formatTime(appt.inicio)}
                             </p>
                           </div>
@@ -1652,15 +1657,15 @@ export default function PainelPage() {
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
+                            <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate">
                               {clientName}
                             </p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <p className="text-xs text-muted-foreground truncate">{serviceName}</p>
+                              <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{serviceName}</p>
                               {appt.profissional && (
                                 <>
-                                  <span className="text-muted-foreground opacity-40">·</span>
-                                  <p className="text-xs text-muted-foreground truncate">{proName}</p>
+                                  <span className="text-stone-400 dark:text-stone-600 opacity-40">·</span>
+                                  <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{proName}</p>
                                 </>
                               )}
                             </div>
@@ -1701,6 +1706,14 @@ export default function PainelPage() {
                 )}
               </div>
             </>
+          )}
+
+          {/* FICHAS TAB */}
+          {activeNav === "fichas" && (
+            <FichaTratamentoManager
+              initialPacienteId={fichaPaciente?.id}
+              onSelectPaciente={(p) => setFichaPaciente(p)}
+            />
           )}
 
           {/* 2. SERVICES TAB */}
@@ -2285,7 +2298,7 @@ export default function PainelPage() {
 
         {/* ── Right Sidebar ── */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-[260px] shrink-0 p-6 flex flex-col gap-6 overflow-y-auto border-l border-border bg-white transition-transform duration-300 xl:static xl:translate-x-0 xl:z-auto ${
+          className={`fixed inset-y-0 right-0 z-40 w-[260px] shrink-0 p-6 flex flex-col gap-6 overflow-y-auto border-l border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 transition-transform duration-300 xl:static xl:translate-x-0 xl:z-auto ${
             isRightSidebarOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -2293,7 +2306,7 @@ export default function PainelPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <p
-                className="text-sm font-semibold text-neutral-800"
+                className="text-sm font-semibold text-stone-800 dark:text-stone-100"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 {MONTH_NAMES[calMonth].slice(0, 3)} {calYear}
@@ -2302,14 +2315,14 @@ export default function PainelPage() {
                 <button
                   id="mini-prev-month"
                   onClick={prevMonth}
-                  className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors cursor-pointer"
+                  className="w-6 h-6 rounded flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
                 >
                   <ChevronLeft size={13} />
                 </button>
                 <button
                   id="mini-next-month"
                   onClick={nextMonth}
-                  className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors cursor-pointer"
+                  className="w-6 h-6 rounded flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
                 >
                   <ChevronRight size={13} />
                 </button>
@@ -2318,7 +2331,7 @@ export default function PainelPage() {
 
             <div className="grid grid-cols-7 mb-1 text-center">
               {WEEK_DAYS_SHORT.map((d, i) => (
-                <div key={i} className="text-[10px] text-muted-foreground py-1">
+                <div key={i} className="text-[10px] text-stone-400 dark:text-stone-400 py-1 font-medium">
                   {d}
                 </div>
               ))}
@@ -2367,11 +2380,11 @@ export default function PainelPage() {
             </div>
           </div>
 
-          <div className="border-t border-border" />
+          <div className="border-t border-stone-200 dark:border-stone-800" />
 
           {/* Quick stats */}
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 dark:text-stone-400 mb-4 font-semibold">
               Resumo do Dia
             </p>
             <div className="flex flex-col gap-3">
@@ -2383,58 +2396,58 @@ export default function PainelPage() {
                 const Icon = item.icon;
                 return (
                   <div key={item.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                       <Icon size={13} />
                       <span className="text-xs">{item.label}</span>
                     </div>
-                    <span className="text-sm font-semibold text-neutral-800">{item.value}</span>
+                    <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">{item.value}</span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="border-t border-border" />
+          <div className="border-t border-stone-200 dark:border-stone-800" />
 
           {/* Day block management */}
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-semibold">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 dark:text-stone-400 mb-3 font-semibold">
               Bloqueio de Agenda
             </p>
             {getHolidayName(calYear, calMonth, selectedDay) ? (
               <div>
                 {checkIsHolidayUnblocked(selectedDay) ? (
                   <div className="flex flex-col gap-2">
-                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                      <span className="text-xs font-semibold text-emerald-800">Feriado (Aberto/Trabalhando)</span>
-                      <p className="text-xs text-emerald-700 mt-1 font-medium">
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                      <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Feriado (Aberto/Trabalhando)</span>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
                         {getHolidayName(calYear, calMonth, selectedDay)}
                       </p>
-                      <p className="text-[10px] text-emerald-600 mt-0.5">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-0.5">
                         Este feriado está aberto para agendamentos.
                       </p>
                     </div>
                     <button
                       onClick={handleBlockHoliday}
-                      className="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                      className="w-full py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-700 dark:text-stone-300 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                     >
                       Bloquear Feriado
                     </button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                      <span className="text-xs font-semibold text-neutral-600">Feriado (Fechado)</span>
-                      <p className="text-xs text-neutral-500 mt-1 font-medium">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-100 dark:border-stone-800">
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-400">Feriado (Fechado)</span>
+                      <p className="text-xs text-stone-500 dark:text-stone-300 mt-1 font-medium">
                         {getHolidayName(calYear, calMonth, selectedDay)}
                       </p>
-                      <p className="text-[10px] text-neutral-400 mt-0.5">
+                      <p className="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5">
                         Fechado por padrão. Clientes não podem agendar.
                       </p>
                     </div>
                     <button
                       onClick={handleUnblockHoliday}
-                      className="w-full py-2 text-white text-xs font-semibold rounded-xl hover:opacity-90 transition-all cursor-pointer"
+                      className="w-full py-2 text-stone-950 text-xs font-bold rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm"
                       style={{ background: ACCENT }}
                     >
                       Trabalhar neste Feriado
@@ -2446,12 +2459,12 @@ export default function PainelPage() {
               <div>
                 {checkIsDayBlocked(selectedDay) ? (
                   <div className="flex flex-col gap-2">
-                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-800 font-medium">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-100 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 font-medium">
                       Esta data está bloqueada para novos agendamentos de clientes.
                     </div>
                     <button
                       onClick={handleUnblockDay}
-                      className="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                      className="w-full py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-700 dark:text-stone-300 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                     >
                       Desbloquear Dia
                     </button>
@@ -2460,7 +2473,7 @@ export default function PainelPage() {
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={handleBlockDay}
-                      className="w-full py-2 text-white text-xs font-semibold rounded-xl hover:opacity-90 transition-all cursor-pointer"
+                      className="w-full py-2 text-stone-950 text-xs font-bold rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm"
                       style={{ background: ACCENT }}
                     >
                       Bloquear este Dia
@@ -2471,11 +2484,11 @@ export default function PainelPage() {
             )}
           </div>
 
-          <div className="border-t border-border" />
+          <div className="border-t border-stone-200 dark:border-stone-800" />
 
           {/* Profissionais list */}
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 dark:text-stone-400 mb-4 font-semibold">
               Profissionais
             </p>
             <div className="flex flex-col gap-3">
@@ -2492,8 +2505,8 @@ export default function PainelPage() {
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-neutral-800 truncate">{pro.nome}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs font-semibold text-stone-800 dark:text-stone-100 truncate">{pro.nome}</p>
+                      <p className="text-[10px] text-stone-400 dark:text-stone-400">
                         {count} agendamentos hoje
                       </p>
                     </div>
@@ -3045,7 +3058,8 @@ export default function PainelPage() {
                   <button
                     onClick={() => {
                       setFichaPaciente(selectedApptDetails.paciente);
-                      setIsFichaModalOpen(true);
+                      setActiveNav("fichas");
+                      setSelectedApptDetails(null);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-700 via-amber-800 to-stone-900 text-amber-100 rounded-xl text-xs font-semibold shadow hover:opacity-95 transition-all cursor-pointer"
                   >

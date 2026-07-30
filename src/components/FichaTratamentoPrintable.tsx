@@ -93,10 +93,11 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
       <div className="relative w-full aspect-682/1024 overflow-hidden bg-white">
         
         {/* Imagem de Fundo Oficial da Clínica */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/ficha-depilacao.png"
           alt="Ficha de Controlo de Tratamento Depilação a Laser"
-          className="w-full h-full object-cover block"
+          className="w-full h-full object-fill block"
         />
 
         {/* Mapeamento de Sobreposição em Coordenadas Percentuais */}

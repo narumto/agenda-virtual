@@ -12,6 +12,45 @@ interface FichaTratamentoPrintableProps {
 export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: FichaTratamentoPrintableProps) {
   const sessoes = ficha?.sessoes || [];
   const sessoesAdquiridasCount = ficha?.sessoes_adquiridas || 10;
+  
+  const sessoesExibidas = sessoes.length > 0 ? sessoes.slice(0, 4) : [
+    {
+      id: "mock-1",
+      data_sessao: "2026-07-01",
+      numero_sessao: 1,
+      zona_tratada: "Axilas",
+      potencia: "18 J",
+      ponteira: "Spot 12",
+      observacoes: "Sem intercorrências"
+    },
+    {
+      id: "mock-2",
+      data_sessao: "2026-07-08",
+      numero_sessao: 2,
+      zona_tratada: "Axilas",
+      potencia: "20 J",
+      ponteira: "Spot 12",
+      observacoes: "Reação normal"
+    },
+    {
+      id: "mock-3",
+      data_sessao: "2026-07-15",
+      numero_sessao: 3,
+      zona_tratada: "Axilas",
+      potencia: "22 J",
+      ponteira: "Spot 12",
+      observacoes: "Leve eritema"
+    },
+    {
+      id: "mock-4",
+      data_sessao: "2026-07-22",
+      numero_sessao: 4,
+      zona_tratada: "Axilas",
+      potencia: "24 J",
+      ponteira: "Spot 12",
+      observacoes: "Tolerou muito bem"
+    }
+  ];
 
   const formatDate = (dStr?: string | null) => {
     if (!dStr) return "";
@@ -107,7 +146,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Nome completo */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "24.5%", left: "16.5%", width: "72%", height: "2.0%" }}
+            style={{ top: "25.7%", left: "16.5%", width: "72%", height: "2.0%" }}
           >
             {paciente.nome || ""}
           </div>
@@ -115,7 +154,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Data de nascimento */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center justify-start tracking-widest px-1 text-[11px]"
-            style={{ top: "27%", left: "20.5%", width: "31%", height: "2.0%", whiteSpace: "pre" }}
+            style={{ top: "28.2%", left: "20.5%", width: "31%", height: "2.0%", whiteSpace: "pre" }}
           >
             {formatSpacedBirthdate(paciente.data_nascimento)}
           </div>
@@ -123,7 +162,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Telemóvel */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "27%", left: "66.5%", width: "26%", height: "2.0%" }}
+            style={{ top: "28.2%", left: "66.5%", width: "26%", height: "2.0%" }}
           >
             {paciente.telefone || ""}
           </div>
@@ -131,7 +170,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* E-mail */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "29.5%", left: "12.5%", width: "80%", height: "2.0%" }}
+            style={{ top: "30.7%", left: "12.5%", width: "80%", height: "2.0%" }}
           >
             {paciente.email || ""}
           </div>
@@ -139,7 +178,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* NIF */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "32.1%", left: "16.5%", width: "76%", height: "2.0%" }}
+            style={{ top: "33.3%", left: "16.5%", width: "76%", height: "2.0%" }}
           >
             {paciente.nif || ""}
           </div>
@@ -149,32 +188,32 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Linha 1 */}
           <div
             className="absolute font-medium text-stone-900 flex items-center justify-center text-center px-1"
-            style={{ top: "43%", left: "5.0%", width: "34.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "5.0%", width: "34.0%", height: "2.4%" }}
           >
             {ficha?.procedimento_zona || "Depilação a Laser"}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "43%", left: "39.5%", width: "18.5%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "39.5%", width: "18.5%", height: "2.4%" }}
           >
             {formatDate(ficha?.data_aquisicao) || formatDate(new Date().toISOString())}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center font-semibold"
-            style={{ top: "43%", left: "58.5%", width: "17.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "58.5%", width: "17.0%", height: "2.4%" }}
           >
             {sessoesAdquiridasCount}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "43%", left: "76.0%", width: "19.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "76.0%", width: "19.0%", height: "2.4%" }}
           >
             {formatDate(ficha?.validade) || "—"}
           </div>
 
 
           {/* 3. ACOMPANHAMENTO DAS SESSÕES (TABELA 2 - Até 4 Linhas na foto) */}
-          {sessoes.slice(0, 4).map((s, idx) => {
+          {sessoesExibidas.map((s, idx) => {
             const topPositions = ["59.6%", "62.1%", "64.6%", "67.1%"];
             const currentTop = topPositions[idx];
 

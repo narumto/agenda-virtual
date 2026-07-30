@@ -130,7 +130,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* E-mail */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "30.8%", left: "12.5%", width: "80%", height: "2.0%" }}
+            style={{ top: "29.5%", left: "12.5%", width: "80%", height: "2.0%" }}
           >
             {paciente.email || ""}
           </div>
@@ -138,7 +138,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* NIF */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "33.1%", left: "16.5%", width: "76%", height: "2.0%" }}
+            style={{ top: "32.1%", left: "16.5%", width: "76%", height: "2.0%" }}
           >
             {paciente.nif || ""}
           </div>
@@ -148,25 +148,25 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Linha 1 */}
           <div
             className="absolute font-medium text-stone-900 flex items-center justify-center text-center px-1"
-            style={{ top: "42.5%", left: "5.0%", width: "34.0%", height: "2.4%" }}
+            style={{ top: "43%", left: "5.0%", width: "34.0%", height: "2.4%" }}
           >
             {ficha?.procedimento_zona || "Depilação a Laser"}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "42.5%", left: "39.5%", width: "18.5%", height: "2.4%" }}
+            style={{ top: "43%", left: "39.5%", width: "18.5%", height: "2.4%" }}
           >
             {formatDate(ficha?.data_aquisicao) || formatDate(new Date().toISOString())}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center font-semibold"
-            style={{ top: "42.5%", left: "58.5%", width: "17.0%", height: "2.4%" }}
+            style={{ top: "43%", left: "58.5%", width: "17.0%", height: "2.4%" }}
           >
             {sessoesAdquiridasCount}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "42.5%", left: "76.0%", width: "19.0%", height: "2.4%" }}
+            style={{ top: "43%", left: "76.0%", width: "19.0%", height: "2.4%" }}
           >
             {formatDate(ficha?.validade) || "—"}
           </div>
@@ -241,10 +241,10 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* Data do Rodapé */}
           <div
-            className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-wider"
-            style={{ top: "89.7%", left: "4.8%", width: "16.0%", height: "2.0%" }}
+            className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-widest"
+            style={{ top: "94.2%", left: "4.8%", width: "16.0%", height: "2.0%", whiteSpace: "pre" }}
           >
-            {formatDate(new Date().toISOString())}
+            {formatSpacedBirthdate(new Date().toISOString())}
           </div>
 
         </div>

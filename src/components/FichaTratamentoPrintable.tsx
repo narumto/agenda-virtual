@@ -33,20 +33,26 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
   const formatSpacedBirthdate = (dStr?: string | null) => {
     if (!dStr) return "";
-    const match = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    
+    // 1. Try matching YYYY-MM-DD
+    let match = String(dStr).match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
     if (match) {
       return `${match[3]}       ${match[2]}       ${match[1]}`;
     }
-    try {
-      const d = new Date(dStr);
-      if (isNaN(d.getTime())) return dStr;
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const year = d.getFullYear();
-      return `${day}       ${month}       ${year}`;
-    } catch {
-      return dStr;
+
+    // 2. Try matching DD/MM/YYYY or DD-MM-YYYY
+    match = String(dStr).match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+    if (match) {
+      return `${match[1]}       ${match[2]}       ${match[3]}`;
     }
+
+    // 3. Fallback for ISO strings
+    const isoMatch = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoMatch) {
+      return `${isoMatch[3]}       ${isoMatch[2]}       ${isoMatch[1]}`;
+    }
+
+    return dStr;
   };
 
   return (

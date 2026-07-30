@@ -91,6 +91,23 @@ export function FichaTratamentoModal({
     }
   };
 
+  const formatPortuguesePhone = (phone?: string | null) => {
+    if (!phone) return "";
+    let cleaned = phone.replace(/\D/g, "");
+    let hasCountryCode = false;
+    if (cleaned.startsWith("351") && cleaned.length > 9) {
+      cleaned = cleaned.substring(3);
+      hasCountryCode = true;
+    }
+    if (cleaned.length === 9) {
+      const part1 = cleaned.substring(0, 3);
+      const part2 = cleaned.substring(3, 6);
+      const part3 = cleaned.substring(6, 9);
+      return hasCountryCode ? `+351 ${part1} ${part2} ${part3}` : `${part1} ${part2} ${part3}`;
+    }
+    return phone;
+  };
+
   // Initialize patient data and fetch fichas
   useEffect(() => {
     if (paciente) {
@@ -381,7 +398,7 @@ export function FichaTratamentoModal({
                 <label className="block text-xs font-medium text-stone-500 mb-1">Telemóvel</label>
                 <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200">
                   <Phone size={14} className="text-stone-400 shrink-0" />
-                  <span>{paciente.telefone}</span>
+                  <span>{formatPortuguesePhone(paciente.telefone)}</span>
                 </div>
               </div>
 

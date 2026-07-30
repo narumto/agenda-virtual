@@ -94,6 +94,23 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
     return dStr;
   };
 
+  const formatPortuguesePhone = (phone?: string | null) => {
+    if (!phone) return "";
+    let cleaned = phone.replace(/\D/g, "");
+    let hasCountryCode = false;
+    if (cleaned.startsWith("351") && cleaned.length > 9) {
+      cleaned = cleaned.substring(3);
+      hasCountryCode = true;
+    }
+    if (cleaned.length === 9) {
+      const part1 = cleaned.substring(0, 3);
+      const part2 = cleaned.substring(3, 6);
+      const part3 = cleaned.substring(6, 9);
+      return hasCountryCode ? `+351 ${part1} ${part2} ${part3}` : `${part1} ${part2} ${part3}`;
+    }
+    return phone;
+  };
+
   return (
     <div id="ficha-printable" className="hidden print:block bg-white text-stone-900 font-sans max-w-4xl mx-auto print:shadow-none print:border-none print:p-0">
       
@@ -164,7 +181,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
             className="absolute font-semibold text-stone-900 flex items-center px-1"
             style={{ top: "28.2%", left: "66.5%", width: "26%", height: "2.0%" }}
           >
-            {paciente.telefone || ""}
+            {formatPortuguesePhone(paciente.telefone)}
           </div>
 
           {/* E-mail */}
@@ -214,7 +231,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* 3. ACOMPANHAMENTO DAS SESSÕES (TABELA 2 - Até 4 Linhas na foto) */}
           {sessoesExibidas.map((s, idx) => {
-            const topPositions = ["59.6%", "62.1%", "64.6%", "67.1%"];
+            const topPositions = ["61.1%", "63.2%", "65.3%", "67.4%"];
             const currentTop = topPositions[idx];
 
             return (
@@ -262,7 +279,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
                 {/* Observações */}
                 <div
                   className="absolute text-stone-900 flex items-center px-1 text-[9px] truncate"
-                  style={{ top: currentTop, left: "76.8%", width: "18.5%", height: "2.2%" }}
+                  style={{ top: currentTop, left: "79%", width: "18.5%", height: "2.2%" }}
                 >
                   {s.observacoes || ""}
                 </div>

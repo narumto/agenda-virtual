@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
   
@@ -16,9 +18,42 @@
   --muted-foreground: #8A8178;
   
   --accent: #C49A82;
+  --accent-light: #F5EDE6;
   --accent-foreground: #FFFFFF;
   
+  --sidebar-bg: #1E1B18;
+  --sidebar-text: #C8BFB8;
+  --sidebar-active-bg: #2D2722;
+  --card-bg: #FFFFFF;
+  
   --border: rgba(43, 39, 35, 0.1);
+}
+
+.dark {
+  color-scheme: dark;
+  
+  --background: #12100E;
+  --foreground: #F5F2EE;
+  
+  --primary: #F5F2EE;
+  --primary-foreground: #12100E;
+  
+  --secondary: #25211E;
+  --secondary-foreground: #F5F2EE;
+  
+  --muted: #1E1B18;
+  --muted-foreground: #A0968D;
+  
+  --accent: #D4AB93;
+  --accent-light: #2A231F;
+  --accent-foreground: #12100E;
+  
+  --sidebar-bg: #161412;
+  --sidebar-text: #A0968D;
+  --sidebar-active-bg: #26211C;
+  --card-bg: #1A1815;
+  
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -31,7 +66,12 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
   --color-accent-foreground: var(--accent-foreground);
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-active: var(--sidebar-active-bg);
+  --color-card-bg: var(--card-bg);
   --color-border: var(--border);
   
   --font-sans: var(--font-dm-sans), sans-serif;

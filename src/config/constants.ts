@@ -51,7 +51,10 @@ export function formatPhoneDisplay(phone: string): string {
 
 // ── Design Tokens ──
 
-export const ACCENT = "#C49A82";
-export const ACCENT_LIGHT = "#F5EDE6";
-export const BACKGROUND = "#FAF9F6";
-export const PRIMARY = "#2B2723";
+export const ACCENT = "var(--accent)";
+export const ACCENT_LIGHT = "var(--accent-light)";
+export const BACKGROUND = "var(--background)";
+export const PRIMARY = "var(--primary)";
+export const SIDEBAR_BG = "var(--sidebar-bg)";
+export const SIDEBAR_TEXT = "var(--sidebar-text)";
+export const SIDEBAR_ACTIVE_BG = "var(--sidebar-active-bg)";

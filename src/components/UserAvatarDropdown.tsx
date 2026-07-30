@@ -34,11 +34,11 @@ export function UserAvatarDropdown({
           <img
             src={userProfile.foto_url}
             alt="Avatar"
-            className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-[#C49A82]/20 group-hover:ring-[#C49A82]/50 transition-all"
+            className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-accent/20 group-hover:ring-accent/50 transition-all"
           />
         ) : (
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-sm ring-2 ring-[#C49A82]/20 group-hover:ring-[#C49A82]/50 transition-all"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-sm ring-2 ring-accent/20 group-hover:ring-accent/50 transition-all"
             style={{ background: ACCENT }}
           >
             {userProfile?.nome
@@ -48,13 +48,13 @@ export function UserAvatarDropdown({
         )}
         <span
           className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white transition-colors ${
-            open ? "bg-[#C49A82]" : "bg-emerald-400"
+            open ? "bg-accent" : "bg-emerald-400"
           }`}
         />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-52 bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden animate-fade-in z-50">
+        <div className="absolute right-0 mt-3 w-52 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-800 overflow-hidden animate-fade-in z-50">
           {/* User info */}
           <div className="px-4 py-3 border-b border-neutral-50">
             <p className="text-xs text-neutral-400 mb-0.5">Logado como</p>

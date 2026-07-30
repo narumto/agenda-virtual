@@ -11,7 +11,8 @@ interface FichaTratamentoPrintableProps {
 
 export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: FichaTratamentoPrintableProps) {
   const sessoes = ficha?.sessoes || [];
-  const sessoesAdquiridasCount = ficha?.sessoes_adquiridas || 10;
+  const sessoesAdquiridasCount = ficha?.sessoes_adquiridas ?? "";
+  const sessoesExibidas = sessoes.slice(0, 4);
 
   const formatDate = (dStr?: string | null) => {
     if (!dStr) return "";
@@ -29,6 +30,47 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
     } catch {
       return dStr;
     }
+  };
+
+  const formatSpacedBirthdate = (dStr?: string | null) => {
+    if (!dStr) return "";
+    
+    // 1. Try matching YYYY-MM-DD
+    let match = String(dStr).match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
+    if (match) {
+      return `${match[3]}       ${match[2]}       ${match[1]}`;
+    }
+
+    // 2. Try matching MM/DD/YYYY or MM-DD-YYYY
+    match = String(dStr).match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+    if (match) {
+      return `${match[2]}       ${match[1]}       ${match[3]}`;
+    }
+
+    // 3. Fallback for ISO strings
+    const isoMatch = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoMatch) {
+      return `${isoMatch[3]}       ${isoMatch[2]}       ${isoMatch[1]}`;
+    }
+
+    return dStr;
+  };
+
+  const formatPortuguesePhone = (phone?: string | null) => {
+    if (!phone) return "";
+    let cleaned = phone.replace(/\D/g, "");
+    let hasCountryCode = false;
+    if (cleaned.startsWith("351") && cleaned.length > 9) {
+      cleaned = cleaned.substring(3);
+      hasCountryCode = true;
+    }
+    if (cleaned.length === 9) {
+      const part1 = cleaned.substring(0, 3);
+      const part2 = cleaned.substring(3, 6);
+      const part3 = cleaned.substring(6, 9);
+      return hasCountryCode ? `+351 ${part1} ${part2} ${part3}` : `${part1} ${part2} ${part3}`;
+    }
+    return phone;
   };
 
   return (
@@ -66,13 +108,14 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
       `}</style>
 
       {/* MÓDULO 1: SOBREPOSIÇÃO SOBRE A IMAGEM ORIGINAL DO CLIENTE */}
-      <div className="relative w-full aspect-[682/1024] overflow-hidden bg-white">
+      <div className="relative w-full aspect-682/1024 overflow-hidden bg-white">
         
         {/* Imagem de Fundo Oficial da Clínica */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/ficha-depilacao.png"
           alt="Ficha de Controlo de Tratamento Depilação a Laser"
-          className="w-full h-full object-cover block"
+          className="w-full h-full object-fill block"
         />
 
         {/* Mapeamento de Sobreposição em Coordenadas Percentuais */}
@@ -82,31 +125,31 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Nome completo */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "26.3%", left: "20.5%", width: "72%", height: "2.0%" }}
+            style={{ top: "25.7%", left: "16.5%", width: "72%", height: "2.0%" }}
           >
             {paciente.nome || ""}
           </div>
 
           {/* Data de nascimento */}
           <div
-            className="absolute font-medium text-stone-900 flex items-center justify-start tracking-wider px-1 text-[11px]"
-            style={{ top: "28.5%", left: "20.5%", width: "31%", height: "2.0%" }}
+            className="absolute font-semibold text-stone-900 flex items-center justify-start tracking-widest px-1 text-[11px]"
+            style={{ top: "28.2%", left: "20.5%", width: "31%", height: "2.0%", whiteSpace: "pre" }}
           >
-            {formatDate(paciente.data_nascimento)}
+            {formatSpacedBirthdate(paciente.data_nascimento)}
           </div>
 
           {/* Telemóvel */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "28.5%", left: "66.5%", width: "26%", height: "2.0%" }}
+            style={{ top: "28.2%", left: "66.5%", width: "26%", height: "2.0%" }}
           >
-            {paciente.telefone || ""}
+            {formatPortuguesePhone(paciente.telefone)}
           </div>
 
           {/* E-mail */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "30.8%", left: "12.5%", width: "80%", height: "2.0%" }}
+            style={{ top: "30.7%", left: "12.5%", width: "80%", height: "2.0%" }}
           >
             {paciente.email || ""}
           </div>
@@ -114,7 +157,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* NIF */}
           <div
             className="absolute text-stone-900 flex items-center px-1"
-            style={{ top: "33.1%", left: "16.5%", width: "76%", height: "2.0%" }}
+            style={{ top: "33.3%", left: "16.5%", width: "76%", height: "2.0%" }}
           >
             {paciente.nif || ""}
           </div>
@@ -124,33 +167,33 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Linha 1 */}
           <div
             className="absolute font-medium text-stone-900 flex items-center justify-center text-center px-1"
-            style={{ top: "42.5%", left: "5.0%", width: "34.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "5.0%", width: "34.0%", height: "2.4%" }}
           >
-            {ficha?.procedimento_zona || "Depilação a Laser"}
+            {ficha?.procedimento_zona || ""}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "42.5%", left: "39.5%", width: "18.5%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "39.5%", width: "18.5%", height: "2.4%" }}
           >
-            {formatDate(ficha?.data_aquisicao) || formatDate(new Date().toISOString())}
+            {formatDate(ficha?.data_aquisicao) || ""}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center font-semibold"
-            style={{ top: "42.5%", left: "58.5%", width: "17.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "58.5%", width: "17.0%", height: "2.4%" }}
           >
             {sessoesAdquiridasCount}
           </div>
           <div
             className="absolute text-stone-900 flex items-center justify-center text-center"
-            style={{ top: "42.5%", left: "76.0%", width: "19.0%", height: "2.4%" }}
+            style={{ top: "43.7%", left: "76.0%", width: "19.0%", height: "2.4%" }}
           >
-            {formatDate(ficha?.validade) || "—"}
+            {formatDate(ficha?.validade) || ""}
           </div>
 
 
           {/* 3. ACOMPANHAMENTO DAS SESSÕES (TABELA 2 - Até 4 Linhas na foto) */}
-          {sessoes.slice(0, 4).map((s, idx) => {
-            const topPositions = ["59.6%", "62.1%", "64.6%", "67.1%"];
+          {sessoesExibidas.map((s, idx) => {
+            const topPositions = ["61.1%", "63.2%", "65.3%", "67.4%"];
             const currentTop = topPositions[idx];
 
             return (
@@ -198,7 +241,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
                 {/* Observações */}
                 <div
                   className="absolute text-stone-900 flex items-center px-1 text-[9px] truncate"
-                  style={{ top: currentTop, left: "76.8%", width: "18.5%", height: "2.2%" }}
+                  style={{ top: currentTop, left: "79%", width: "18.5%", height: "2.2%" }}
                 >
                   {s.observacoes || ""}
                 </div>
@@ -217,10 +260,10 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
 
           {/* Data do Rodapé */}
           <div
-            className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-wider"
-            style={{ top: "89.7%", left: "4.8%", width: "16.0%", height: "2.0%" }}
+            className="absolute text-stone-900 flex items-center justify-center text-center text-[11px] font-bold tracking-widest"
+            style={{ top: "91.7%", left: "4.8%", width: "16.0%", height: "2.0%", whiteSpace: "pre" }}
           >
-            {formatDate(new Date().toISOString())}
+            {formatSpacedBirthdate(new Date().toISOString())}
           </div>
 
         </div>

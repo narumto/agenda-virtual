@@ -40,10 +40,10 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
       return `${match[3]}       ${match[2]}       ${match[1]}`;
     }
 
-    // 2. Try matching DD/MM/YYYY or DD-MM-YYYY
+    // 2. Try matching MM/DD/YYYY or MM-DD-YYYY
     match = String(dStr).match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
     if (match) {
-      return `${match[1]}       ${match[2]}       ${match[3]}`;
+      return `${match[2]}       ${match[1]}       ${match[3]}`;
     }
 
     // 3. Fallback for ISO strings
@@ -90,7 +90,7 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
       `}</style>
 
       {/* MÓDULO 1: SOBREPOSIÇÃO SOBRE A IMAGEM ORIGINAL DO CLIENTE */}
-      <div className="relative w-full aspect-[682/1024] overflow-hidden bg-white">
+      <div className="relative w-full aspect-682/1024 overflow-hidden bg-white">
         
         {/* Imagem de Fundo Oficial da Clínica */}
         <img

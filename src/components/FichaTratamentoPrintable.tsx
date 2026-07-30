@@ -31,6 +31,24 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
     }
   };
 
+  const formatSpacedBirthdate = (dStr?: string | null) => {
+    if (!dStr) return "";
+    const match = String(dStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}       ${match[2]}       ${match[1]}`;
+    }
+    try {
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return dStr;
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}       ${month}       ${year}`;
+    } catch {
+      return dStr;
+    }
+  };
+
   return (
     <div id="ficha-printable" className="hidden print:block bg-white text-stone-900 font-sans max-w-4xl mx-auto print:shadow-none print:border-none print:p-0">
       
@@ -82,23 +100,23 @@ export function FichaTratamentoPrintable({ paciente, ficha, mode = "image" }: Fi
           {/* Nome completo */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "26.3%", left: "20.5%", width: "72%", height: "2.0%" }}
+            style={{ top: "24.5%", left: "16.5%", width: "72%", height: "2.0%" }}
           >
             {paciente.nome || ""}
           </div>
 
           {/* Data de nascimento */}
           <div
-            className="absolute font-medium text-stone-900 flex items-center justify-start tracking-wider px-1 text-[11px]"
-            style={{ top: "28.5%", left: "20.5%", width: "31%", height: "2.0%" }}
+            className="absolute font-semibold text-stone-900 flex items-center justify-start tracking-widest px-1 text-[11px]"
+            style={{ top: "27%", left: "20.5%", width: "31%", height: "2.0%", whiteSpace: "pre" }}
           >
-            {formatDate(paciente.data_nascimento)}
+            {formatSpacedBirthdate(paciente.data_nascimento)}
           </div>
 
           {/* Telemóvel */}
           <div
             className="absolute font-semibold text-stone-900 flex items-center px-1"
-            style={{ top: "28.5%", left: "66.5%", width: "26%", height: "2.0%" }}
+            style={{ top: "27%", left: "66.5%", width: "26%", height: "2.0%" }}
           >
             {paciente.telefone || ""}
           </div>

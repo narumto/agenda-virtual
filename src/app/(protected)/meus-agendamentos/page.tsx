@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { ToastContainer, ToastMessage, ToastType } from "@/components/Toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { ACCENT, ACCENT_LIGHT } from "@/config/constants";
@@ -294,6 +295,17 @@ export default function MeusAgendamentosPage() {
     init();
   }, [router]);
 
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: ToastType, title: string, description?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, description }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   const handleCancel = async (id: string) => {
     setCancellingId(id);
     try {
@@ -311,8 +323,10 @@ export default function MeusAgendamentosPage() {
           a.id === id ? { ...a, status: "CANCELADO" } : a,
         ),
       );
+      addToast("info", "Agendamento Cancelado", "O agendamento foi cancelado com sucesso.");
     } catch (err: any) {
       setErrorMsg(err.message || "Erro ao cancelar agendamento.");
+      addToast("error", "Erro ao Cancelar", err.message || "Não foi possível cancelar.");
     } finally {
       setCancellingId(null);
       setConfirmCancel(null);
@@ -481,6 +495,7 @@ export default function MeusAgendamentosPage() {
           </div>
         </div>
       )}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }

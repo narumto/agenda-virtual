@@ -22,9 +22,11 @@ import {
   Printer,
   Search,
   History,
+  Edit,
 } from "lucide-react";
 import { Paciente, FichaTratamento, SessaoTratamento } from "@/types";
 import { FichaTratamentoPrintable } from "./FichaTratamentoPrintable";
+import { ToastContainer, ToastMessage, ToastType } from "./Toast";
 
 interface FichaTratamentoModalProps {
   isOpen: boolean;
@@ -45,6 +47,17 @@ export function FichaTratamentoModal({
   const [savingPaciente, setSavingPaciente] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: ToastType, title: string, description?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, description }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Active patient & list for selection
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(paciente);
@@ -70,6 +83,14 @@ export function FichaTratamentoModal({
   const [validadeFicha, setValidadeFicha] = useState("");
   const [obsGeraisFicha, setObsGeraisFicha] = useState("");
   const [creatingFicha, setCreatingFicha] = useState(false);
+
+  // Edit Ficha state
+  const [editingFichaId, setEditingFichaId] = useState<string | null>(null);
+  const [editProcedimentoZona, setEditProcedimentoZona] = useState("");
+  const [editSessoesAdquiridas, setEditSessoesAdquiridas] = useState(10);
+  const [editValidadeFicha, setEditValidadeFicha] = useState("");
+  const [editObsGeraisFicha, setEditObsGeraisFicha] = useState("");
+  const [savingEditFicha, setSavingEditFicha] = useState(false);
 
   // New Session form state
   const [showNewSessaoForm, setShowNewSessaoForm] = useState(false);
@@ -271,9 +292,11 @@ export function FichaTratamentoModal({
 
       setTelefone(formattedPhone);
       setSuccessMsg("Dados do paciente salvos com sucesso!");
+      addToast("success", "Dados do Paciente Salvos", "As informações foram salvas com sucesso.");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", "Erro ao Salvar Dados", err.message);
     } finally {
       setSavingPaciente(false);
     }
@@ -312,11 +335,85 @@ export function FichaTratamentoModal({
       setZonaTratada(newFicha.procedimento_zona);
       setShowNewFichaForm(false);
       setSuccessMsg("Ficha de tratamento criada!");
+      addToast("success", "Ficha Criada", `Tratamento "${procedimentoZona.trim()}" cadastrado.`);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", "Erro ao Criar Ficha", err.message);
     } finally {
       setCreatingFicha(false);
+    }
+  };
+
+  const handleStartEditFicha = (ficha: FichaTratamento) => {
+    setEditingFichaId(ficha.id);
+    setEditProcedimentoZona(ficha.procedimento_zona);
+    setEditSessoesAdquiridas(ficha.sessoes_adquiridas);
+    setEditValidadeFicha(ficha.validade ? ficha.validade.split("T")[0] : "");
+    setEditObsGeraisFicha(ficha.observacoes_gerais || "");
+    setShowNewFichaForm(false);
+  };
+
+  const handleSaveEditFicha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFichaId || !editProcedimentoZona.trim()) {
+      setError("Informe o procedimento / zona.");
+      return;
+    }
+    setSavingEditFicha(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/fichas/${editingFichaId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          procedimento_zona: editProcedimentoZona.trim(),
+          sessoes_adquiridas: editSessoesAdquiridas,
+          validade: editValidadeFicha || null,
+          observacoes_gerais: editObsGeraisFicha || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Erro ao atualizar ficha");
+      }
+
+      const updatedFicha: FichaTratamento = await res.json();
+
+      setFichas((prev) =>
+        prev.map((f) => (f.id === editingFichaId ? { ...f, ...updatedFicha } : f))
+      );
+
+      setEditingFichaId(null);
+      setSuccessMsg("Ficha de tratamento atualizada!");
+      addToast("success", "Ficha Atualizada", "Ficha editada com sucesso.");
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
+      addToast("error", "Erro ao Atualizar Ficha", err.message);
+    } finally {
+      setSavingEditFicha(false);
+    }
+  };
+
+  const handleDeleteFicha = async (fichaId: string) => {
+    if (!confirm("Deseja realmente excluir esta ficha de tratamento? Todas as sessões desta ficha serão removidas.")) return;
+    try {
+      const res = await fetch(`/api/fichas/${fichaId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao excluir ficha.");
+
+      const remaining = fichas.filter((f) => f.id !== fichaId);
+      setFichas(remaining);
+      if (selectedFichaId === fichaId) {
+        setSelectedFichaId(remaining[0]?.id || null);
+      }
+      setSuccessMsg("Ficha excluída com sucesso.");
+      addToast("info", "Ficha Excluída", "Registo de ficha removido.");
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
+      addToast("error", "Erro ao Excluir Ficha", err.message);
     }
   };
 
@@ -368,9 +465,11 @@ export function FichaTratamentoModal({
       setObsSessao("");
       setNumSessao((currentFicha.sessoes?.length || 0) + 2);
       setSuccessMsg("Sessão registrada com sucesso!");
+      addToast("success", "Sessão Registrada", `Evolução técnica da ${numSessao}ª sessão gravada.`);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", "Erro na Sessão", err.message);
     } finally {
       setSavingSessao(false);
     }
@@ -396,8 +495,10 @@ export function FichaTratamentoModal({
           return f;
         })
       );
+      addToast("info", "Sessão Excluída", "O registro da sessão foi removido.");
     } catch (err: any) {
       setError(err.message);
+      addToast("error", "Erro ao Excluir Sessão", err.message);
     }
   };
 
@@ -413,9 +514,11 @@ export function FichaTratamentoModal({
       if (!res.ok) throw new Error("Erro ao salvar observações.");
 
       setSuccessMsg("Observações salvas!");
+      addToast("success", "Observações Salvas", "Observações gerais atualizadas.");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", "Erro ao Salvar Observações", err.message);
     }
   };
 
@@ -629,37 +732,147 @@ export function FichaTratamentoModal({
               </form>
             )}
 
-            {/* Selector de Fichas Existentes */}
-            {fichas.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {fichas.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => {
-                      setSelectedFichaId(f.id);
-                      setObservacoesGerais(f.observacoes_gerais || "");
-                      setZonaTratada(f.procedimento_zona);
-                      setNumSessao((f.sessoes?.length || 0) + 1);
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2 border ${
-                      f.id === currentFicha?.id
-                        ? "bg-amber-900 text-amber-100 border-amber-800 shadow-sm"
-                        : "bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-100"
-                    }`}
-                  >
-                    <Sparkles size={12} className={f.id === currentFicha?.id ? "text-amber-400" : "text-stone-400"} />
-                    <span>{f.procedimento_zona}</span>
-                    <span className="text-[10px] opacity-75 px-1.5 py-0.5 rounded bg-black/20">
-                      {f.sessoes?.length || 0}/{f.sessoes_adquiridas} sessões
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-stone-500 italic">
-                Nenhum procedimento cadastrado ainda. Clique em "Novo Tratamento" para adicionar o pacote de depilação a laser.
-              </p>
-            )}
+                {/* Form de Edição de Ficha */}
+                {editingFichaId && (
+                  <form onSubmit={handleSaveEditFicha} className="p-4 bg-[#231F1C] text-amber-100 border border-amber-800/80 rounded-xl space-y-3 shadow-lg mb-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                        <Edit size={14} /> Editar Ficha de Tratamento
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setEditingFichaId(null)}
+                        className="text-stone-400 hover:text-white transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-stone-300 mb-1">Procedimento / Zona *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editProcedimentoZona}
+                          onChange={(e) => setEditProcedimentoZona(e.target.value)}
+                          className="w-full px-3 py-2 bg-stone-900 border border-stone-700 rounded-lg text-xs text-amber-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-stone-300 mb-1">Nº Sessões Adquiridas</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={editSessoesAdquiridas}
+                          onChange={(e) => setEditSessoesAdquiridas(Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-stone-900 border border-stone-700 rounded-lg text-xs text-amber-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-stone-300 mb-1">Validade (Data)</label>
+                        <input
+                          type="date"
+                          value={editValidadeFicha}
+                          onChange={(e) => setEditValidadeFicha(e.target.value)}
+                          className="w-full px-3 py-2 bg-stone-900 border border-stone-700 rounded-lg text-xs text-amber-50"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-stone-300 mb-1">Observações Gerais</label>
+                      <input
+                        type="text"
+                        placeholder="Observações do plano/tratamento..."
+                        value={editObsGeraisFicha}
+                        onChange={(e) => setEditObsGeraisFicha(e.target.value)}
+                        className="w-full px-3 py-2 bg-stone-900 border border-stone-700 rounded-lg text-xs text-amber-50"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingFichaId(null)}
+                        className="px-3 py-1.5 text-xs text-stone-400 hover:text-white"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingEditFicha}
+                        className="px-4 py-1.5 text-xs bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-medium shadow flex items-center gap-1.5"
+                      >
+                        <Save size={12} />
+                        {savingEditFicha ? "Salvando..." : "Salvar Alterações"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Selector de Fichas Existentes */}
+                {fichas.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {fichas.map((f) => {
+                      const isSelected = f.id === currentFicha?.id;
+                      return (
+                        <div
+                          key={f.id}
+                          className={`group relative rounded-xl text-xs font-medium transition-all flex items-center gap-2 border px-3 py-2 ${
+                            isSelected
+                              ? "bg-amber-900 text-amber-100 border-amber-800 shadow-sm"
+                              : "bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-100"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFichaId(f.id);
+                              setObservacoesGerais(f.observacoes_gerais || "");
+                              setZonaTratada(f.procedimento_zona);
+                              setNumSessao((f.sessoes?.length || 0) + 1);
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Sparkles size={12} className={isSelected ? "text-amber-400" : "text-stone-400"} />
+                            <span>{f.procedimento_zona}</span>
+                            <span className="text-[10px] opacity-75 px-1.5 py-0.5 rounded bg-black/20">
+                              {f.sessoes?.length || 0}/{f.sessoes_adquiridas} sessões
+                            </span>
+                          </button>
+
+                          {/* Ações da Ficha */}
+                          <div className="flex items-center gap-1 ml-1 pl-1 border-l border-white/10">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEditFicha(f);
+                              }}
+                              className="p-1 rounded hover:bg-black/20 text-amber-300 hover:text-white transition-colors cursor-pointer"
+                              title="Editar Ficha"
+                            >
+                              <Edit size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFicha(f.id);
+                              }}
+                              className="p-1 rounded hover:bg-black/20 text-rose-400 hover:text-rose-200 transition-colors cursor-pointer"
+                              title="Excluir Ficha"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-500 italic">
+                    Nenhum procedimento cadastrado ainda. Clique em "Novo Tratamento" para adicionar o pacote de depilação a laser.
+                  </p>
+                )}
           </section>
 
           {/* 3. ACOMPANHAMENTO DAS SESSÕES (EVOLUÇÃO TÉCNICA) */}
@@ -975,6 +1188,7 @@ export function FichaTratamentoModal({
         }}
         ficha={currentFicha}
       />
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }

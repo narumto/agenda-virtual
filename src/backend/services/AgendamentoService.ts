@@ -33,7 +33,7 @@ export class AgendamentoService {
       servico_id: data.servico_id,
       inicio: data.inicio,
       fim: data.fim,
-      status: "PENDENTE",
+      status: data.status || "PENDENTE",
       observacao: data.observacao || null,
     });
 

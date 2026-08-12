@@ -34,11 +34,14 @@ import {
   Calendar,
   DollarSign,
   ClipboardList,
+  Search,
+  UserPlus,
 } from "lucide-react";
 import Holidays from "date-holidays";
 import { FichaTratamentoModal } from "@/components/FichaTratamentoModal";
 import { FichaTratamentoManager } from "@/components/FichaTratamentoManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ToastContainer, ToastMessage, ToastType } from "@/components/Toast";
 
 const hd = new Holidays("PT");
 
@@ -63,6 +66,13 @@ interface ApiAgendamento {
   paciente?: { id: string; nome: string; telefone: string; email?: string };
   servico?: { id: string; nome: string; preco: number; duracao_minutos: number };
   profissional?: { id: string; nome: string; foto_url?: string | null };
+}
+
+interface ApiPaciente {
+  id: string;
+  nome: string;
+  telefone: string;
+  email?: string | null;
 }
 
 interface ApiServico {
@@ -347,6 +357,33 @@ export default function PainelPage() {
   const [configuracao, setConfiguracao] = useState<ApiConfiguracao | null>(null);
   const [proProfile, setProProfile] = useState<any>(null);
   const [agendaBlocks, setAgendaBlocks] = useState<any[]>([]);
+  const [pacientes, setPacientes] = useState<ApiPaciente[]>([]);
+
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((type: ToastType, title: string, description?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, title, description }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const [isManualBookingModalOpen, setIsManualBookingModalOpen] = useState(false);
+  const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
+  const [selectedPacienteId, setSelectedPacienteId] = useState("");
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [newPacienteNome, setNewPacienteNome] = useState("");
+  const [newPacienteTelefone, setNewPacienteTelefone] = useState("");
+  const [newPacienteEmail, setNewPacienteEmail] = useState("");
+  const [bookingServicoId, setBookingServicoId] = useState("");
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingTime, setBookingTime] = useState("09:00");
+  const [bookingStatus, setBookingStatus] = useState<AgendamentoStatus>("CONFIRMADO");
+  const [bookingObservacao, setBookingObservacao] = useState("");
+  const [manualBookingLoading, setManualBookingLoading] = useState(false);
+  const [manualBookingError, setManualBookingError] = useState<string | null>(null);
 
   const [loadingAgendamentos, setLoadingAgendamentos] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -537,6 +574,18 @@ export default function PainelPage() {
     }
   }, []);
 
+  const fetchPacientes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pacientes");
+      if (res.ok) {
+        const data: ApiPaciente[] = await res.json();
+        setPacientes(data);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar pacientes", e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAgendamentos();
     fetchServicos();
@@ -545,7 +594,8 @@ export default function PainelPage() {
     fetchConfiguracoes();
     fetchAgendaBlocks();
     fetchProProfile();
-  }, [fetchAgendamentos, fetchServicos, fetchProfissionais, fetchCategorias, fetchConfiguracoes, fetchAgendaBlocks, fetchProProfile]);
+    fetchPacientes();
+  }, [fetchAgendamentos, fetchServicos, fetchProfissionais, fetchCategorias, fetchConfiguracoes, fetchAgendaBlocks, fetchProProfile, fetchPacientes]);
 
   const filteredAgendamentos = agendamentos.filter((a) => {
     const parts = getLisbonDateParts(new Date(a.inicio));
@@ -568,6 +618,117 @@ export default function PainelPage() {
   const estimatedRevenue = sortedAgendamentos
     .filter((a) => a.status !== "CANCELADO")
     .reduce((sum, a) => sum + (a.servico?.preco || 0), 0);
+
+  const handleOpenManualBooking = () => {
+    fetchPacientes();
+    setClientMode("existing");
+    setSelectedPacienteId(pacientes[0]?.id || "");
+    setPatientSearchQuery("");
+    setNewPacienteNome("");
+    setNewPacienteTelefone("");
+    setNewPacienteEmail("");
+    const activeServs = servicos.filter((s) => s.ativo);
+    setBookingServicoId(activeServs[0]?.id || servicos[0]?.id || "");
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const defaultDateStr = `${calYear}-${pad(calMonth + 1)}-${pad(selectedDay)}`;
+    setBookingDate(defaultDateStr);
+    setBookingTime("09:00");
+    setBookingStatus("CONFIRMADO");
+    setBookingObservacao("");
+    setManualBookingError(null);
+    setIsManualBookingModalOpen(true);
+  };
+
+  const handleCreateManualBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setManualBookingLoading(true);
+    setManualBookingError(null);
+
+    try {
+      let targetPacienteId = selectedPacienteId;
+
+      if (clientMode === "new") {
+        if (!newPacienteNome.trim()) {
+          throw new Error("Informe o nome do cliente");
+        }
+        if (!newPacienteTelefone.trim()) {
+          throw new Error("Informe o telefone do cliente");
+        }
+
+        const resPac = await fetch("/api/pacientes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: newPacienteNome.trim(),
+            telefone: newPacienteTelefone.trim(),
+            email: newPacienteEmail.trim() || null,
+          }),
+        });
+
+        if (!resPac.ok) {
+          const errData = await resPac.json();
+          throw new Error(errData.message || "Erro ao cadastrar novo cliente");
+        }
+
+        const dataPac = await resPac.json();
+        const createdPac = dataPac.data || dataPac;
+        targetPacienteId = createdPac.id;
+        fetchPacientes();
+      }
+
+      if (!targetPacienteId) {
+        throw new Error("Selecione ou cadastre um cliente");
+      }
+
+      if (!bookingServicoId) {
+        throw new Error("Selecione um serviço");
+      }
+
+      if (!bookingDate || !bookingTime) {
+        throw new Error("Selecione a data e o horário do agendamento");
+      }
+
+      const selectedService = servicos.find((s) => s.id === bookingServicoId);
+      const durationMinutes = selectedService?.duracao_minutos || 30;
+
+      const [year, month, day] = bookingDate.split("-").map(Number);
+      const [hours, minutes] = bookingTime.split(":").map(Number);
+
+      const inicioDate = getLisbonDate(year, month - 1, day, hours, minutes);
+      if (isNaN(inicioDate.getTime())) {
+        throw new Error("Data ou horário inválidos");
+      }
+      const fimDate = new Date(inicioDate.getTime() + durationMinutes * 60 * 1000);
+
+      const resAppt = await fetch("/api/agendamentos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paciente_id: targetPacienteId,
+          servico_id: bookingServicoId,
+          inicio: inicioDate.toISOString(),
+          fim: fimDate.toISOString(),
+          status: bookingStatus,
+          observacao: bookingObservacao.trim() || null,
+        }),
+      });
+
+      if (!resAppt.ok) {
+        const errData = await resAppt.json();
+        throw new Error(errData.message || "Erro ao criar agendamento");
+      }
+
+      await fetchAgendamentos();
+      setIsManualBookingModalOpen(false);
+      addToast("success", "Agendamento Criado!", "O cliente foi agendado com sucesso.");
+    } catch (err: any) {
+      setManualBookingError(err.message || "Erro ao realizar agendamento manual");
+      addToast("error", "Erro ao Agendar", err.message || "Não foi possível criar o agendamento.");
+    } finally {
+      setManualBookingLoading(false);
+    }
+  };
 
   const handleAppointmentStatus = async (id: string, displayStatus: DisplayStatus) => {
     setUpdatingStatusId(id);
@@ -595,8 +756,10 @@ export default function PainelPage() {
       setSelectedApptDetails((prev) =>
         prev && prev.id === id ? { ...prev, ...updated } : prev
       );
+      addToast("success", "Status Atualizado", `Agendamento marcado como "${STATUS_CONFIG[displayStatus].label}".`);
     } catch (e: any) {
       setError(e.message);
+      addToast("error", "Erro ao Atualizar Status", e.message);
     } finally {
       setUpdatingStatusId(null);
       setOpenAppointmentMenuId(null);
@@ -613,7 +776,7 @@ export default function PainelPage() {
     try {
       const [hours, minutes] = rescheduleTime.split(":").map(Number);
       const [year, month, day] = rescheduleDate.split("-").map(Number);
-      const dateInicio = new Date(year, month - 1, day, hours, minutes);
+      const dateInicio = getLisbonDate(year, month - 1, day, hours, minutes);
 
       if (isNaN(dateInicio.getTime())) {
         throw new Error("Data ou horário inválidos");
@@ -647,8 +810,10 @@ export default function PainelPage() {
       );
 
       setIsRescheduling(false);
+      addToast("success", "Agendamento Reagendado", "Novo horário salvo com sucesso.");
     } catch (e: any) {
       setRescheduleError(e.message || "Ocorreu um erro ao reagendar");
+      addToast("error", "Erro ao Reagendar", e.message || "Não foi possível reagendar.");
     } finally {
       setRescheduleLoading(false);
     }
@@ -773,8 +938,10 @@ export default function PainelPage() {
         setServicos((prev) => [...prev, created]);
       }
       setIsModalOpen(false);
+      addToast("success", editingService ? "Serviço Atualizado" : "Serviço Criado", `O serviço "${payload.nome}" foi salvo.`);
     } catch (e: any) {
       setModalError(e.message);
+      addToast("error", "Erro no Serviço", e.message);
     } finally {
       setModalLoading(false);
     }
@@ -793,8 +960,10 @@ export default function PainelPage() {
           }
           setServicos((prev) => prev.filter((s) => s.id !== id));
           setOpenMenuId(null);
+          addToast("info", "Serviço Excluído", "O serviço foi removido do sistema.");
         } catch (e: any) {
           setError(e.message);
+          addToast("error", "Erro ao Excluir Serviço", e.message);
         }
       },
       "rose"
@@ -859,8 +1028,10 @@ export default function PainelPage() {
         setCategorias((prev) => [...prev, created]);
       }
       setIsCategoryModalOpen(false);
+      addToast("success", editingCategory ? "Categoria Atualizada" : "Categoria Criada", `A categoria "${categoryName.trim()}" foi salva.`);
     } catch (e: any) {
       setCategoryModalError(e.message);
+      addToast("error", "Erro na Categoria", e.message);
     } finally {
       setCategoryModalLoading(false);
     }
@@ -879,8 +1050,10 @@ export default function PainelPage() {
           }
           setCategorias((prev) => prev.filter((c) => c.id !== id));
           setOpenMenuId(null);
+          addToast("info", "Categoria Excluída", "A categoria foi removida.");
         } catch (e: any) {
           setError(e.message);
+          addToast("error", "Erro ao Excluir Categoria", e.message);
         }
       },
       "rose"
@@ -1086,8 +1259,10 @@ export default function PainelPage() {
 
       fetchProfissionais();
       setIsProModalOpen(false);
+      addToast("success", editingPro ? "Profissional Atualizado" : "Profissional Cadastrado", `As informações de ${proName.trim()} foram salvas.`);
     } catch (e: any) {
       setProModalError(e.message);
+      addToast("error", "Erro no Profissional", e.message);
     } finally {
       setProModalLoading(false);
     }
@@ -1166,9 +1341,11 @@ export default function PainelPage() {
       const data = await res.json();
       setConfiguracao(data.data || data);
       setSettingsSuccess(true);
+      addToast("success", "Configurações Salvas", "As preferências da clínica foram atualizadas com sucesso.");
       setTimeout(() => setSettingsSuccess(false), 3000);
     } catch (e: any) {
       setSettingsError(e.message);
+      addToast("error", "Erro nas Configurações", e.message);
     } finally {
       setSettingsLoading(false);
     }
@@ -1266,8 +1443,10 @@ export default function PainelPage() {
       }
 
       await fetchAgendaBlocks();
+      addToast("warning", "Dia Bloqueado", `O dia ${selectedDay} foi bloqueado na agenda.`);
     } catch (e: any) {
       setError(e.message);
+      addToast("error", "Erro ao Bloquear Dia", e.message);
     }
   };
 
@@ -1301,8 +1480,10 @@ export default function PainelPage() {
         }
       }
       await fetchAgendaBlocks();
+      addToast("success", "Dia Desbloqueado", `O dia ${selectedDay} foi desbloqueado.`);
     } catch (e: any) {
       setError(e.message);
+      addToast("error", "Erro ao Desbloquear Dia", e.message);
     }
   };
 
@@ -1456,6 +1637,19 @@ export default function PainelPage() {
             );
           })}
 
+          {/* Quick Action: Agendamento Manual */}
+          <button
+            onClick={() => {
+              handleOpenManualBooking();
+              setIsSidebarOpen(false);
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full cursor-pointer text-white shadow-sm mt-3"
+            style={{ background: ACCENT }}
+          >
+            <Plus size={16} />
+            Agendamento Manual
+          </button>
+
           {/* External link to client-facing site */}
           <button
             onClick={() => window.open("/", "_blank")}
@@ -1565,6 +1759,17 @@ export default function PainelPage() {
               <ThemeToggle />
               {activeNav === "agenda" && (
                 <>
+                  <button
+                    id="btn-manual-booking"
+                    onClick={handleOpenManualBooking}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                    style={{ background: ACCENT }}
+                  >
+                    <Plus size={14} />
+                    <span className="hidden sm:inline">Agendar Cliente</span>
+                    <span className="sm:hidden">Agendar</span>
+                  </button>
+
                   <button
                     id="btn-refresh-agenda"
                     onClick={fetchAgendamentos}
@@ -2143,11 +2348,9 @@ export default function PainelPage() {
                       type="text"
                       maxLength={5}
                       placeholder="Ex: 08:00"
-                      key={configuracao ? "loaded-abertura" : "loading-abertura"}
-                      defaultValue={settingsForm.hora_abertura}
+                      value={settingsForm.hora_abertura}
                       onChange={(e) => {
                         const formatted = maskTimeInput(e.target.value);
-                        e.target.value = formatted;
                         setSettingsForm((prev) => ({ ...prev, hora_abertura: formatted }));
                       }}
                       className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
@@ -2161,11 +2364,9 @@ export default function PainelPage() {
                       type="text"
                       maxLength={5}
                       placeholder="Ex: 18:00"
-                      key={configuracao ? "loaded-fechamento" : "loading-fechamento"}
-                      defaultValue={settingsForm.hora_fechamento}
+                      value={settingsForm.hora_fechamento}
                       onChange={(e) => {
                         const formatted = maskTimeInput(e.target.value);
-                        e.target.value = formatted;
                         setSettingsForm((prev) => ({ ...prev, hora_fechamento: formatted }));
                       }}
                       className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
@@ -2182,11 +2383,9 @@ export default function PainelPage() {
                       type="text"
                       maxLength={5}
                       placeholder="Ex: 12:00"
-                      key={configuracao ? "loaded-almoco-inicio" : "loading-almoco-inicio"}
-                      defaultValue={settingsForm.almoco_inicio}
+                      value={settingsForm.almoco_inicio}
                       onChange={(e) => {
                         const formatted = maskTimeInput(e.target.value);
-                        e.target.value = formatted;
                         setSettingsForm((prev) => ({ ...prev, almoco_inicio: formatted }));
                       }}
                       className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
@@ -2200,11 +2399,9 @@ export default function PainelPage() {
                       type="text"
                       maxLength={5}
                       placeholder="Ex: 13:00"
-                      key={configuracao ? "loaded-almoco-fim" : "loading-almoco-fim"}
-                      defaultValue={settingsForm.almoco_fim}
+                      value={settingsForm.almoco_fim}
                       onChange={(e) => {
                         const formatted = maskTimeInput(e.target.value);
-                        e.target.value = formatted;
                         setSettingsForm((prev) => ({ ...prev, almoco_fim: formatted }));
                       }}
                       className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] transition-colors bg-neutral-50/50"
@@ -2653,6 +2850,277 @@ export default function PainelPage() {
           />
         )}
       </div>
+
+      {/* ── MODAL: MANUAL BOOKING BY ADMIN ── */}
+      {isManualBookingModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#FDF8F5] text-[#C49A82]">
+                  <CalendarDays size={20} />
+                </div>
+                <div>
+                  <h2
+                    className="text-lg font-semibold text-neutral-900 leading-tight"
+                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  >
+                    Agendamento Manual
+                  </h2>
+                  <p className="text-xs text-neutral-500">Agendar cliente direto no painel</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsManualBookingModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateManualBooking} className="p-6 space-y-4 overflow-y-auto flex-1">
+              {manualBookingError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  <span>{manualBookingError}</span>
+                </div>
+              )}
+
+              {/* Mode toggle: Existing vs New Patient */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide block mb-2">
+                  Cliente *
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 rounded-xl mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setClientMode("existing")}
+                    className={`py-2 px-3 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                      clientMode === "existing"
+                        ? "bg-white text-neutral-900 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-800"
+                    }`}
+                  >
+                    Buscar Existente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClientMode("new")}
+                    className={`py-2 px-3 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                      clientMode === "new"
+                        ? "bg-white text-neutral-900 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-800"
+                    }`}
+                  >
+                    + Novo Cliente
+                  </button>
+                </div>
+
+                {clientMode === "existing" ? (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-3 text-neutral-400" />
+                      <input
+                        type="text"
+                        placeholder="Filtrar por nome ou telefone..."
+                        value={patientSearchQuery}
+                        onChange={(e) => setPatientSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                      />
+                    </div>
+                    <select
+                      value={selectedPacienteId}
+                      onChange={(e) => setSelectedPacienteId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                      required
+                    >
+                      <option value="" disabled>
+                        -- Selecione o Cliente --
+                      </option>
+                      {pacientes
+                        .filter(
+                          (p) =>
+                            !patientSearchQuery ||
+                            p.nome.toLowerCase().includes(patientSearchQuery.toLowerCase()) ||
+                            p.telefone.includes(patientSearchQuery)
+                        )
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome} ({p.telefone})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-3.5 bg-neutral-50 rounded-2xl border border-neutral-100">
+                    <div>
+                      <label className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide block mb-1">
+                        Nome Completo *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Maria Silva"
+                        value={newPacienteNome}
+                        onChange={(e) => setNewPacienteNome(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide block mb-1">
+                          Telefone / WhatsApp *
+                        </label>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="912345678"
+                          value={newPacienteTelefone}
+                          onChange={(e) => setNewPacienteTelefone(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide block mb-1">
+                          E-mail (opcional)
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="cliente@exemplo.com"
+                          value={newPacienteEmail}
+                          onChange={(e) => setNewPacienteEmail(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Service Selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                  Serviço *
+                </label>
+                <select
+                  value={bookingServicoId}
+                  onChange={(e) => setBookingServicoId(e.target.value)}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                  required
+                >
+                  <option value="" disabled>
+                    -- Selecione o Serviço --
+                  </option>
+                  {servicos
+                    .filter((s) => s.ativo)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome} — €{s.preco} ({s.duracao_minutos} min)
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                    Data *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="px-4 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                    Horário de Início *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={bookingTime}
+                    onChange={(e) => setBookingTime(e.target.value)}
+                    className="px-4 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50"
+                  />
+                </div>
+              </div>
+
+              {/* Initial Status */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                  Status Inicial
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingStatus("CONFIRMADO")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      bookingStatus === "CONFIRMADO"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                        : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <CheckCircle size={14} />
+                    Confirmado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingStatus("PENDENTE")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      bookingStatus === "PENDENTE"
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                        : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <AlertCircle size={14} />
+                    Pendente
+                  </button>
+                </div>
+              </div>
+
+              {/* Observação */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                  Observações (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Instruções adicionais ou preferências do cliente..."
+                  value={bookingObservacao}
+                  onChange={(e) => setBookingObservacao(e.target.value)}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:border-[#C49A82] bg-neutral-50/50 resize-none"
+                />
+              </div>
+
+              {/* Footer / Buttons */}
+              <div className="pt-3 border-t border-neutral-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsManualBookingModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={manualBookingLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 cursor-pointer disabled:opacity-50"
+                  style={{ background: ACCENT }}
+                >
+                  {manualBookingLoading && <RefreshCw size={13} className="animate-spin" />}
+                  {manualBookingLoading ? "Agendando..." : "Confirmar Agendamento"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL: SERVICE CREATION / EDITION ── */}
       {isModalOpen && (
@@ -3390,6 +3858,8 @@ export default function PainelPage() {
         agendamentoId={selectedApptDetails?.id}
         servicoNome={selectedApptDetails?.servico?.nome}
       />
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }
